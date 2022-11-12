@@ -1,0 +1,3 @@
+[submodule "LatLngUTMConverter"]
+	path = LatLngUTMConverter
+	url = https://github.com/owaremx/LatLngUTMConverter.git
