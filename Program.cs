@@ -42,12 +42,15 @@ using (var connection = factory.CreateConnection()) {
 	var consumer = new EventingBasicConsumer(channel);
 
 	consumer.Received += (sender, ea) => {
-		var body = ea.Body.ToArray();
-		var message = Encoding.UTF8.GetString(body);
-		Console.WriteLine($"Received order: {message}");
-		var order = JsonConvert.DeserializeObject<Order>(message);
-		Console.WriteLine(order!.GeoJsonString);
-		channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+		try {
+			var body = ea.Body.ToArray();
+			var message = Encoding.UTF8.GetString(body);
+			Console.WriteLine($"Received order: {message}");
+			var order = JsonConvert.DeserializeObject<Order>(message);
+			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+		} catch (JsonReaderException) {
+			Console.WriteLine("GeoJSON format error");
+		}
 	};
 
 	_ = channel.BasicConsume(queue: rabbitMqQueue, autoAck: false, consumer: consumer);
