@@ -1,7 +1,8 @@
-﻿using Iida.Shared.Requests;
+﻿using Iida.Shared;
+using Iida.Shared.Requests;
 
 namespace Iida.Core.Scrapers;
 
 internal interface IScraper {
-	void Execute(Order? order);
+	Task Execute(Order? order, Configuration?[]? configurations);
 }
