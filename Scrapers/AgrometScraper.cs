@@ -1,5 +1,4 @@
 ﻿using Iida.Shared.Requests;
-using Oware;
 
 namespace Iida.Core.Scrapers;
 
