@@ -13,10 +13,11 @@ using Newtonsoft.Json;
 namespace Iida.Core.Scrapers;
 
 internal partial class UsgsScraper : IScraper {
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "Download breaks if using the simplified using statement")]
 	public async Task Execute(Order? order, Configuration?[]? configurations) {
 		try {
 			Console.WriteLine("Calculating centroid of polygon...");
-			var polygon = (Polygon)order.FeatureCollection.Features[0].Geometry;
+			var polygon = (Polygon)order!.FeatureCollection!.Features[0].Geometry;
 			var lineString = polygon.Coordinates[0];
 			var vertexes = lineString.Coordinates;
 			var (latitude, longitude) = CalculateCentroid(vertexes);
@@ -115,10 +116,16 @@ internal partial class UsgsScraper : IScraper {
 									Console.WriteLine($"Scene {result!.entityId}: No old download directory found");
 								}
 								Console.WriteLine($"Scene {result!.entityId}: downloading scene...");
-								using (var download = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead)) {
-									using var from = await download.Content.ReadAsStreamAsync();
-									using var to = File.OpenWrite(Path.Combine(downloadPath, "bands.tar"));
-									await from.CopyToAsync(to);
+								try {
+									using (var download = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead)) {
+										using (var from = await download.Content.ReadAsStreamAsync()) {
+											using (var to = File.OpenWrite(Path.Combine(downloadPath, "bands.tar"))) {
+												await from.CopyToAsync(to);
+											}
+										}
+									}
+								} catch {
+									Console.WriteLine("Something happened while downloading the scene");
 								}
 							} else {
 								Console.WriteLine("Error scraping download website");
