@@ -7,7 +7,6 @@ using GeoJSON.Net.Geometry;
 
 using ICSharpCode.SharpZipLib.Tar;
 
-using Iida.Shared;
 using Iida.Shared.Requests;
 using Iida.Shared.Usgs;
 
@@ -16,8 +15,14 @@ using Newtonsoft.Json;
 namespace Iida.Core.Scrapers;
 
 internal partial class UsgsScraper : IScraper {
+	private readonly string _tempFolder;
+	private readonly Parameters _parameters;
+	public UsgsScraper(string tempFolder, Parameters parameters) {
+		_tempFolder = tempFolder;
+		_parameters = parameters;
+	}
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "Download breaks if using the simplified using statement")]
-	public async Task<(IEnumerable<string>, IEnumerable<string>)> Execute(Order order, string tempFolder, params Configuration[] configurations) {
+	public async Task<(IEnumerable<string>, IEnumerable<string>)> Execute(Order order) {
 		var dates = new List<string>();
 		var paths = new List<string>();
 		try {
@@ -27,7 +32,6 @@ internal partial class UsgsScraper : IScraper {
 			var vertexes = lineString.Coordinates;
 			var (latitude, longitude) = CalculateCentroid(vertexes);
 			Console.WriteLine($"Centroid calculated: ({latitude}; {longitude})");
-			var usgsParameters = (Shared.Usgs.Parameters)configurations[0];
 			Console.WriteLine("Getting HTTP clients ready...");
 			var apiClient = new HttpClient {
 				Timeout = TimeSpan.FromMinutes(10)
@@ -41,26 +45,26 @@ internal partial class UsgsScraper : IScraper {
 				Timeout = TimeSpan.FromMinutes(10)
 			};
 			Console.WriteLine("Scraping login website...");
-			var website = await websiteClient.GetAsync($"{usgsParameters!.Login}");
+			var website = await websiteClient.GetAsync($"{_parameters!.Login}");
 			if (website.IsSuccessStatusCode) {
 				var csrfRegex = CsrfRegex();
 				var getSessionContent = await website.Content.ReadAsStringAsync();
 				var csrf = csrfRegex.Matches(getSessionContent)[0].Value.Split('"')[3];
 				var data = new[] {
-					new KeyValuePair<string, string>("username", usgsParameters.Username!),
-					new KeyValuePair<string, string>("password", usgsParameters.Password!),
+					new KeyValuePair<string, string>("username", _parameters.Username!),
+					new KeyValuePair<string, string>("password", _parameters.Password!),
 					new KeyValuePair<string, string>("csrf", csrf)
 				};
 				Console.WriteLine("Logging in...");
-				var websiteLogin = await websiteClient.PostAsync($"{usgsParameters.Login}", new FormUrlEncodedContent(data));
-				var apiClientResponse = await apiClient.PostAsJsonAsync($"{usgsParameters.Api}/login", new { username = usgsParameters.Username, password = usgsParameters.Password });
+				var websiteLogin = await websiteClient.PostAsync($"{_parameters.Login}", new FormUrlEncodedContent(data));
+				var apiClientResponse = await apiClient.PostAsJsonAsync($"{_parameters.Api}/login", new { username = _parameters.Username, password = _parameters.Password });
 				if (apiClientResponse.IsSuccessStatusCode) {
 					Console.WriteLine("Logged in successfully");
 					var token = JsonConvert.DeserializeObject<Shared.Usgs.LoginResponse>(await apiClientResponse.Content.ReadAsStringAsync());
 					apiClient.DefaultRequestHeaders.Add("X-Auth-Token", token!.Data);
 					Console.WriteLine("Preparing scene search payload...");
 					var payload = new {
-						datasetName = usgsParameters.Dataset,
+						datasetName = _parameters.Dataset,
 						sceneFilter = new {
 							acquisitionFilter = new {
 								start = order.Start,
@@ -80,10 +84,10 @@ internal partial class UsgsScraper : IScraper {
 						}
 					};
 					Console.WriteLine("Searching for scenes...");
-					var apiClientResponse1 = await apiClient.PostAsJsonAsync($"{usgsParameters.Api}/scene-search", payload);
+					var apiClientResponse1 = await apiClient.PostAsJsonAsync($"{_parameters.Api}/scene-search", payload);
 					if (apiClientResponse1.IsSuccessStatusCode) {
 						Console.WriteLine("Scene search successful");
-						var dataProductId = usgsParameters.Dataset switch {
+						var dataProductId = _parameters.Dataset switch {
 							"landsat_tm_c1" => DataProductId.LandsatTmC1,
 							"landsat_etm_c1" => DataProductId.LandsatEtmC1,
 							"landsat_8_c1" => DataProductId.Landsat8C1,
@@ -100,20 +104,20 @@ internal partial class UsgsScraper : IScraper {
 						Console.WriteLine($"Found {searchSceneResponse!.data!.recordsReturned} scenes");
 						foreach (var result in searchSceneResponse.data.results!) {
 							Console.WriteLine($"Checking scene {result!.entityId}...");
-							if (double.Parse(result.cloudCover!) > double.Parse(usgsParameters.CloudCover!)) {
-								Console.WriteLine($"Scene exceeds maximum cloud cover ({usgsParameters.CloudCover}%)");
+							if (double.Parse(result.cloudCover!) > double.Parse(_parameters.CloudCover!)) {
+								Console.WriteLine($"Scene exceeds maximum cloud cover ({_parameters.CloudCover}%)");
 								continue;
 							}
 							Console.WriteLine($"Scene {result.entityId}: Scraping download website...");
-							var downloadWebsiteResponse = await websiteClient.GetAsync($"{usgsParameters.SearchScene}/{dataProductId!.Value}/{result.entityId}");
+							var downloadWebsiteResponse = await websiteClient.GetAsync($"{_parameters.SearchScene}/{dataProductId!.Value}/{result.entityId}");
 							if (downloadWebsiteResponse.IsSuccessStatusCode) {
 								var resultDataProductIdRegex = DataProductIdRegex();
 								var queryContent = await downloadWebsiteResponse.Content.ReadAsStringAsync();
 								var resultDataProductIdMatch = resultDataProductIdRegex.Match(queryContent);
 								var resultDataProductId = resultDataProductIdMatch.Value.Split('"')[1];
-								var downloadUrl = $"{usgsParameters.DownloadScene}/{resultDataProductId}/{result.entityId}/EE/";
+								var downloadUrl = $"{_parameters.DownloadScene}/{resultDataProductId}/{result.entityId}/EE/";
 								try {
-									var downloadPath = $"{Path.Combine(tempFolder, result.entityId!)}";
+									var downloadPath = $"{Path.Combine(_tempFolder, result.entityId!)}";
 									_ = Directory.CreateDirectory(downloadPath);
 									Console.WriteLine($"Scene {result.entityId}: downloading scene from {downloadUrl}...");
 									using (var download = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead)) {
@@ -139,7 +143,7 @@ internal partial class UsgsScraper : IScraper {
 					} else {
 						Console.WriteLine("Error searching scenes");
 					}
-					var logout = await apiClient.PostAsJsonAsync($"{usgsParameters.Api}/logout", string.Empty);
+					var logout = await apiClient.PostAsJsonAsync($"{_parameters.Api}/logout", string.Empty);
 					if (logout.IsSuccessStatusCode) {
 						Console.WriteLine("Logged out successfully");
 					} else {
