@@ -92,14 +92,15 @@ internal partial class UsgsScraper : IScraper {
 							_ => null
 						};
 						var searchSceneResponse = JsonConvert.DeserializeObject<SearchSceneResponse>(await apiClientResponse1.Content.ReadAsStringAsync())!;
+						Console.WriteLine($"Found {searchSceneResponse.data!.recordsReturned} scenes!");
 						foreach (var result in searchSceneResponse.data!.results!) {
 							Console.WriteLine($"Checking scene {result!.entityId}...");
 							if (double.Parse(result.cloudCover!) > double.Parse(usgsParameters.CloudCover!)) {
 								Console.WriteLine($"Scene exceeds maximum cloud cover ({usgsParameters.CloudCover}%)");
 								continue;
 							}
-							var downloadWebsiteResponse = await websiteClient.GetAsync($"{usgsParameters.SearchScene}/{dataProductId!.Value}/{result.entityId}");
 							Console.WriteLine($"Scene {result!.entityId}: Scraping download website...");
+							var downloadWebsiteResponse = await websiteClient.GetAsync($"{usgsParameters.SearchScene}/{dataProductId!.Value}/{result.entityId}");
 							if (downloadWebsiteResponse.IsSuccessStatusCode) {
 								var resultDataProductIdRegex = DataProductIdRegex();
 								var queryContent = await downloadWebsiteResponse.Content.ReadAsStringAsync();
@@ -138,6 +139,8 @@ internal partial class UsgsScraper : IScraper {
 			Console.WriteLine("Task canceled");
 		} catch (NullReferenceException) {
 			Console.WriteLine("Null reference detected");
+		} catch (ArgumentNullException) {
+			Console.WriteLine("Null argument detected");
 		}
 	}
 	[GeneratedRegex("name=\"csrf\" value=\"(.+?)\"")]
