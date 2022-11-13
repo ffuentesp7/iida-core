@@ -83,10 +83,16 @@ internal partial class UsgsScraper : IScraper {
 							"sentinel_2a" => DataProductId.Sentinel2a,
 							_ => null
 						};
-						var response = await apiClientResponse1.Content.ReadAsStringAsync();
-						Console.WriteLine(response);
+						var jsonResponse = JsonConvert.DeserializeObject<SearchSceneResponse>(await apiClientResponse1.Content.ReadAsStringAsync())!;
+						Console.WriteLine(jsonResponse.sessionId);
 					} else {
 						Console.WriteLine("API USGS scene search error");
+					}
+					var logout = await apiClient.PostAsJsonAsync($"{usgsParameters.Api}/logout", string.Empty);
+					if (logout.IsSuccessStatusCode) {
+						Console.WriteLine("Logged out from USGS API");
+					} else {
+						Console.WriteLine("API USGS logout error");
 					}
 				} else {
 					Console.WriteLine("API USGS login error");
