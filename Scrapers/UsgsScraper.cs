@@ -14,15 +14,15 @@ namespace Iida.Core.Scrapers;
 
 internal partial class UsgsScraper : IScraper {
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "Download breaks if using the simplified using statement")]
-	public async Task Execute(Order? order, Configuration?[]? configurations) {
+	public async Task Execute(Order order, Configuration[] configurations) {
 		try {
 			Console.WriteLine("Calculating centroid of polygon...");
-			var polygon = (Polygon)order!.FeatureCollection!.Features[0].Geometry;
+			var polygon = (Polygon)order.FeatureCollection!.Features[0].Geometry;
 			var lineString = polygon.Coordinates[0];
 			var vertexes = lineString.Coordinates;
 			var (latitude, longitude) = CalculateCentroid(vertexes);
 			Console.WriteLine($"Centroid calculated: ({latitude}; {longitude})");
-			var googleCloudParameters = (Shared.GoogleCloud.Parameters?)configurations![0];
+			var googleCloudParameters = (Shared.GoogleCloud.Parameters?)configurations[0];
 			var usgsParameters = (Parameters?)configurations[1];
 			Console.WriteLine("Getting HTTP clients ready...");
 			var apiClient = new HttpClient {
@@ -51,7 +51,7 @@ internal partial class UsgsScraper : IScraper {
 				var websiteLogin = await websiteClient.PostAsync($"{usgsParameters.Login}", new FormUrlEncodedContent(data));
 				var apiClientResponse = await apiClient.PostAsJsonAsync($"{usgsParameters.Api}/login", new { username = usgsParameters.Username, password = usgsParameters.Password });
 				if (apiClientResponse.IsSuccessStatusCode) {
-					Console.WriteLine("Logged in successfully!");
+					Console.WriteLine("Logged in successfully");
 					var token = JsonConvert.DeserializeObject<Shared.Usgs.LoginResponse>(await apiClientResponse.Content.ReadAsStringAsync());
 					apiClient.DefaultRequestHeaders.Add("X-Auth-Token", token!.Data);
 					Console.WriteLine("Preparing scene search payload...");
@@ -59,8 +59,8 @@ internal partial class UsgsScraper : IScraper {
 						datasetName = usgsParameters.Dataset,
 						sceneFilter = new {
 							acquisitionFilter = new {
-								start = order!.Start,
-								end = order!.End
+								start = order.Start,
+								end = order.End
 							},
 							spatialFilter = new {
 								filterType = "mbr",
@@ -78,7 +78,7 @@ internal partial class UsgsScraper : IScraper {
 					Console.WriteLine("Searching for scenes...");
 					var apiClientResponse1 = await apiClient.PostAsJsonAsync($"{usgsParameters.Api}/scene-search", payload);
 					if (apiClientResponse1.IsSuccessStatusCode) {
-						Console.WriteLine("Scene search successful!");
+						Console.WriteLine("Scene search successful");
 						var dataProductId = usgsParameters.Dataset switch {
 							"landsat_tm_c1" => DataProductId.LandsatTmC1,
 							"landsat_etm_c1" => DataProductId.LandsatEtmC1,
@@ -92,15 +92,15 @@ internal partial class UsgsScraper : IScraper {
 							"sentinel_2a" => DataProductId.Sentinel2a,
 							_ => null
 						};
-						var searchSceneResponse = JsonConvert.DeserializeObject<SearchSceneResponse>(await apiClientResponse1.Content.ReadAsStringAsync())!;
-						Console.WriteLine($"Found {searchSceneResponse.data!.recordsReturned} scenes!");
-						foreach (var result in searchSceneResponse.data!.results!) {
+						var searchSceneResponse = JsonConvert.DeserializeObject<SearchSceneResponse>(await apiClientResponse1.Content.ReadAsStringAsync());
+						Console.WriteLine($"Found {searchSceneResponse!.data!.recordsReturned} scenes");
+						foreach (var result in searchSceneResponse.data.results!) {
 							Console.WriteLine($"Checking scene {result!.entityId}...");
 							if (double.Parse(result.cloudCover!) > double.Parse(usgsParameters.CloudCover!)) {
 								Console.WriteLine($"Scene exceeds maximum cloud cover ({usgsParameters.CloudCover}%)");
 								continue;
 							}
-							Console.WriteLine($"Scene {result!.entityId}: Scraping download website...");
+							Console.WriteLine($"Scene {result.entityId}: Scraping download website...");
 							var downloadWebsiteResponse = await websiteClient.GetAsync($"{usgsParameters.SearchScene}/{dataProductId!.Value}/{result.entityId}");
 							if (downloadWebsiteResponse.IsSuccessStatusCode) {
 								var resultDataProductIdRegex = DataProductIdRegex();
@@ -111,11 +111,11 @@ internal partial class UsgsScraper : IScraper {
 								var downloadPath = $"{Path.Combine(Path.GetTempPath(), "iida")}";
 								try {
 									Directory.Delete(downloadPath, true);
-									Console.WriteLine($"Scene {result!.entityId}: Deleted old download directory");
+									Console.WriteLine($"Scene {result.entityId}: Deleted old download directory");
 								} catch {
-									Console.WriteLine($"Scene {result!.entityId}: No old download directory found");
+									Console.WriteLine($"Scene {result.entityId}: No old download directory found");
 								}
-								Console.WriteLine($"Scene {result!.entityId}: downloading scene...");
+								Console.WriteLine($"Scene {result.entityId}: downloading scene...");
 								try {
 									using (var download = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead)) {
 										using (var from = await download.Content.ReadAsStreamAsync()) {
@@ -136,7 +136,7 @@ internal partial class UsgsScraper : IScraper {
 					}
 					var logout = await apiClient.PostAsJsonAsync($"{usgsParameters.Api}/logout", string.Empty);
 					if (logout.IsSuccessStatusCode) {
-						Console.WriteLine("Logged out successfully!");
+						Console.WriteLine("Logged out successfully");
 					} else {
 						Console.WriteLine("Error logging out");
 					}
@@ -156,8 +156,10 @@ internal partial class UsgsScraper : IScraper {
 			Console.WriteLine("Null argument detected");
 		}
 	}
+
 	[GeneratedRegex("name=\"csrf\" value=\"(.+?)\"")]
 	private static partial Regex CsrfRegex();
+
 	private static (double latitude, double longitude) CalculateCentroid(IReadOnlyCollection<IPosition> vertexes) {
 		var x = 0.0;
 		var y = 0.0;
@@ -178,6 +180,7 @@ internal partial class UsgsScraper : IScraper {
 		centroidLongitude *= 180 / Math.PI;
 		return (centroidLatitude, centroidLongitude);
 	}
+
 	[GeneratedRegex("data-productId=\"(.+?)\"")]
 	private static partial Regex DataProductIdRegex();
 }

@@ -16,7 +16,6 @@ if (Debugger.IsAttached) {
 	_ = builder.AddUserSecrets<Program>();
 }
 var configurationRoot = builder.Build();
-
 string? agrometApi;
 string? agrometHostname;
 string? agrometLocation;
@@ -24,7 +23,9 @@ string? googleCloudCredentialFile;
 string? googleCloudStorageBucket;
 string? mySqlConnectionString;
 string? rabbitMqHostname;
+string? rabbitMqPassword;
 string? rabbitMqQueue;
+string? rabbitMqUsername;
 string? usgsApi;
 string? usgsCloudCover;
 string? usgsDataset;
@@ -42,7 +43,9 @@ if (Debugger.IsAttached) {
 	googleCloudStorageBucket = configurationRoot.GetSection("GOOGLE_CLOUD_STORAGE_BUCKET").Value;
 	mySqlConnectionString = configurationRoot.GetSection("MYSQL_CONNECTIONSTRING").Value;
 	rabbitMqHostname = configurationRoot.GetSection("RABBITMQ_HOST").Value;
+	rabbitMqPassword = configurationRoot.GetSection("RABBITMQ_PASSWORD").Value;
 	rabbitMqQueue = configurationRoot.GetSection("RABBITMQ_QUEUE").Value;
+	rabbitMqUsername = configurationRoot.GetSection("RABBITMQ_USERNAME").Value;
 	usgsApi = configurationRoot.GetSection("USGS_API").Value;
 	usgsCloudCover = configurationRoot.GetSection("USGS_CLOUD_COVER").Value;
 	usgsDataset = configurationRoot.GetSection("USGS_DATASET").Value;
@@ -60,7 +63,9 @@ if (Debugger.IsAttached) {
 	googleCloudStorageBucket = Environment.GetEnvironmentVariable("GOOGLE_CLOUD_STORAGE_BUCKET");
 	mySqlConnectionString = Environment.GetEnvironmentVariable("MYSQL_CONNECTIONSTRING");
 	rabbitMqHostname = Environment.GetEnvironmentVariable("RABBITMQ_HOST");
+	rabbitMqPassword = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD");
 	rabbitMqQueue = Environment.GetEnvironmentVariable("RABBITMQ_QUEUE");
+	rabbitMqUsername = Environment.GetEnvironmentVariable("RABBITMQ_USERNAME");
 	usgsApi = Environment.GetEnvironmentVariable("USGS_API");
 	usgsCloudCover = Environment.GetEnvironmentVariable("USGS_CLOUD_COVER");
 	usgsDataset = Environment.GetEnvironmentVariable("USGS_DATASET");
@@ -98,16 +103,14 @@ var usgsParameters = new Iida.Shared.Usgs.Parameters {
 	Username = usgsUsername,
 	Password = usgsPassword
 };
-
 var scraperContext = new ScraperContext();
-var factory = new ConnectionFactory() { HostName = rabbitMqHostname };
+var factory = new ConnectionFactory() { HostName = rabbitMqHostname, UserName = rabbitMqUsername, Password = rabbitMqPassword };
 using (var connection = factory.CreateConnection()) {
 	using var channel = connection.CreateModel();
 	_ = channel.QueueDeclare(queue: rabbitMqQueue, durable: true, exclusive: false, autoDelete: false, arguments: null);
 	channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
 	Console.WriteLine("Waiting for order requests...");
 	var consumer = new EventingBasicConsumer(channel);
-
 	consumer.Received += (sender, ea) => {
 		try {
 			var body = ea.Body.ToArray();
@@ -115,13 +118,12 @@ using (var connection = factory.CreateConnection()) {
 			Console.WriteLine($"Received order: {message}");
 			var order = JsonConvert.DeserializeObject<Order>(message);
 			scraperContext.SetStrategy(new UsgsScraper());
-			scraperContext.ExecuteStrategy(order, new Iida.Shared.Configuration[] { googleCloudParameters, usgsParameters });
+			scraperContext.ExecuteStrategy(order!, new Iida.Shared.Configuration[] { googleCloudParameters, usgsParameters });
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 		} catch (JsonReaderException) {
 			Console.WriteLine("GeoJSON format error");
 		}
 	};
-
 	_ = channel.BasicConsume(queue: rabbitMqQueue, autoAck: false, consumer: consumer);
 	Console.WriteLine("Press the ENTER key to exit");
 	_ = Console.ReadLine();
