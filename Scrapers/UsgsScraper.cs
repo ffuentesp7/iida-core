@@ -17,6 +17,7 @@ internal partial class UsgsScraper : IScraper {
 	private readonly Parameters _parameters;
 	public List<string> Dates { get; set; } = new List<string>();
 	public List<string> Paths { get; set; } = new List<string>();
+	public List<string> EntityIds { get; set; } = new List<string>();
 	public UsgsScraper(string tempFolder, Parameters parameters) {
 		_tempFolder = tempFolder;
 		_parameters = parameters;
@@ -100,6 +101,7 @@ internal partial class UsgsScraper : IScraper {
 								Console.WriteLine($"Scene exceeds maximum cloud cover ({_parameters.CloudCover}%)");
 								continue;
 							}
+							EntityIds.Add(result.entityId!);
 							var startDate = result.temporalCoverage!.startDate;
 							Console.WriteLine($"Scene {result.entityId}: temporalCoverage.startDate is {startDate}");
 							Dates.Add(startDate!);
@@ -129,7 +131,7 @@ internal partial class UsgsScraper : IScraper {
 									Paths.Add(downloadPath);
 									Console.WriteLine($"Scene {result.entityId}: complete");
 								} catch {
-									Console.WriteLine("Something happened while processing the scene/files");
+									Console.WriteLine($"Scene {result.entityId}:Something happened while processing the scene/files");
 								}
 							} else {
 								Console.WriteLine("Error scraping download website");

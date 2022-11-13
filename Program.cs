@@ -141,8 +141,8 @@ using (var connection = factory.CreateConnection()) {
 			Console.WriteLine($"Centroid calculated: ({latitude}; {longitude})");
 			var usgsScraper = new UsgsScraper(tempFolder, usgsParameters);
 			scraperContext.SetStrategy(usgsScraper);
-			//await scraperContext.ExecuteStrategy(order!, latitude, longitude);
-			var agrometScraper = new AgrometScraper(tempFolder, new List<string>() { "2022-11-13 00:00:00", "2022-11-14 00:00:00" }, agrometParameters);
+			await scraperContext.ExecuteStrategy(order!, latitude, longitude);
+			var agrometScraper = new AgrometScraper(tempFolder, usgsScraper.Dates, usgsScraper.EntityIds, agrometParameters);
 			scraperContext.SetStrategy(agrometScraper);
 			await scraperContext.ExecuteStrategy(order!, latitude, longitude);
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);

@@ -7,6 +7,7 @@
 		<UserSecretsId>975b025f-e20d-4b24-95a0-4b1726d2583a</UserSecretsId>
 	</PropertyGroup>
 	<ItemGroup>
+		<PackageReference Include="CsvHelper" Version="30.0.1" />
 		<PackageReference Include="GeoJSON.Net" Version="1.2.19" />
 		<PackageReference Include="Google.Cloud.Storage.V1" Version="4.1.0" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="7.0.0" />
