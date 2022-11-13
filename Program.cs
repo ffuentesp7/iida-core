@@ -26,6 +26,7 @@ string? mySqlConnectionString;
 string? rabbitMqHostname;
 string? rabbitMqQueue;
 string? usgsApi;
+string? usgsDataset;
 string? usgsLogin;
 string? usgsLogout;
 string? usgsSearchScene;
@@ -42,6 +43,7 @@ if (Debugger.IsAttached) {
 	rabbitMqHostname = configurationRoot.GetSection("RABBITMQ_HOST").Value;
 	rabbitMqQueue = configurationRoot.GetSection("RABBITMQ_QUEUE").Value;
 	usgsApi = configurationRoot.GetSection("USGS_API").Value;
+	usgsDataset = configurationRoot.GetSection("USGS_DATASET").Value;
 	usgsLogin = configurationRoot.GetSection("USGS_LOGIN").Value;
 	usgsLogout = configurationRoot.GetSection("USGS_LOGOUT").Value;
 	usgsSearchScene = configurationRoot.GetSection("USGS_SEARCH_SCENE").Value;
@@ -58,6 +60,7 @@ if (Debugger.IsAttached) {
 	rabbitMqHostname = Environment.GetEnvironmentVariable("RABBITMQ_HOST");
 	rabbitMqQueue = Environment.GetEnvironmentVariable("RABBITMQ_QUEUE");
 	usgsApi = Environment.GetEnvironmentVariable("USGS_API");
+	usgsDataset = Environment.GetEnvironmentVariable("USGS_DATASET");
 	usgsLogin = Environment.GetEnvironmentVariable("USGS_LOGIN");
 	usgsLogout = Environment.GetEnvironmentVariable("USGS_LOGOUT");
 	usgsSearchScene = Environment.GetEnvironmentVariable("USGS_SEARCH_SCENE");
@@ -83,6 +86,7 @@ var rabbitMqParameters = new Iida.Shared.RabbitMq.Parameters {
 };
 var usgsParameters = new Iida.Shared.Usgs.Parameters {
 	Api = usgsApi,
+	Dataset = usgsDataset,
 	Login = usgsLogin,
 	Logout = usgsLogout,
 	SearchScene = usgsSearchScene,
@@ -91,7 +95,7 @@ var usgsParameters = new Iida.Shared.Usgs.Parameters {
 	Password = usgsPassword
 };
 
-var scaperContext = new ScraperContext();
+var scraperContext = new ScraperContext();
 var factory = new ConnectionFactory() { HostName = rabbitMqHostname };
 using (var connection = factory.CreateConnection()) {
 	using var channel = connection.CreateModel();
@@ -106,6 +110,8 @@ using (var connection = factory.CreateConnection()) {
 			var message = Encoding.UTF8.GetString(body);
 			Console.WriteLine($"Received order: {message}");
 			var order = JsonConvert.DeserializeObject<Order>(message);
+			scraperContext.SetStrategy(new UsgsScraper());
+			scraperContext.ExecuteStrategy(order, new Iida.Shared.Configuration[] { googleCloudParameters, usgsParameters });
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 		} catch (JsonReaderException) {
 			Console.WriteLine("GeoJSON format error");
