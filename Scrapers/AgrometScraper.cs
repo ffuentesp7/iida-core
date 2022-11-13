@@ -1,5 +1,9 @@
-﻿using Iida.Shared.Agromet;
+﻿using System.Globalization;
+
+using Iida.Shared.Agromet;
 using Iida.Shared.Requests;
+
+using Oware;
 
 namespace Iida.Core.Scrapers;
 
@@ -13,7 +17,31 @@ internal class AgrometScraper : IScraper {
 		_dates = dates;
 		_parameters = parameters;
 	}
-	public async Task Execute(Order order) {
-
+	public async Task Execute(Order order, double latitude, double longitude) {
+		try {
+			Console.WriteLine("Getting HTTP client ready...");
+			var client = new HttpClient {
+				Timeout = TimeSpan.FromMinutes(int.Parse(_parameters.Timeout!))
+			};
+			Console.WriteLine("Getting closest station...");
+			var latLngUtmConverter = new LatLngUTMConverter(string.Empty);
+			var utmCoordinates = latLngUtmConverter.convertLatLngToUtm(latitude, longitude);
+			var closestRequest = await client.GetAsync($"{_parameters.Location}?ema_f_utmx={utmCoordinates.Easting.ToString(CultureInfo.InvariantCulture)}&ema_f_utmy={utmCoordinates.Northing.ToString(CultureInfo.InvariantCulture)}&ema_f_lat={latitude.ToString(CultureInfo.InvariantCulture)}&ema_f_lon={longitude.ToString(CultureInfo.InvariantCulture)}");
+			Console.WriteLine($"{_parameters.Location}?ema_f_utmx={utmCoordinates.Easting.ToString(CultureInfo.InvariantCulture)}&ema_f_utmy={utmCoordinates.Northing.ToString(CultureInfo.InvariantCulture)}&ema_f_lat={latitude.ToString(CultureInfo.InvariantCulture)}&ema_f_lon={longitude.ToString(CultureInfo.InvariantCulture)}");
+			if (closestRequest.IsSuccessStatusCode) {
+				var closest = await closestRequest.Content.ReadAsStringAsync();
+				Console.WriteLine($"Closest station ID: {closest}");
+			} else {
+				Console.Write("Error getting closest station");
+			}
+		} catch (HttpRequestException) {
+			Console.WriteLine("Disconnected");
+		} catch (TaskCanceledException) {
+			Console.WriteLine("Task canceled");
+		} catch (NullReferenceException) {
+			Console.WriteLine("Null reference detected");
+		} catch (ArgumentNullException) {
+			Console.WriteLine("Null argument detected");
+		}
 	}
 }

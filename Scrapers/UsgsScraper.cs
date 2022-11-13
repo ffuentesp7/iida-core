@@ -3,8 +3,6 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.RegularExpressions;
 
-using GeoJSON.Net.Geometry;
-
 using ICSharpCode.SharpZipLib.Tar;
 
 using Iida.Shared.Requests;
@@ -24,17 +22,11 @@ internal partial class UsgsScraper : IScraper {
 		_parameters = parameters;
 	}
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "Download breaks if using the simplified using statement")]
-	public async Task Execute(Order order) {
+	public async Task Execute(Order order, double latitude, double longitude) {
 		try {
-			Console.WriteLine("Calculating centroid of polygon...");
-			var polygon = (Polygon)order.FeatureCollection!.Features[0].Geometry;
-			var lineString = polygon.Coordinates[0];
-			var vertexes = lineString.Coordinates;
-			var (latitude, longitude) = CalculateCentroid(vertexes);
-			Console.WriteLine($"Centroid calculated: ({latitude}; {longitude})");
 			Console.WriteLine("Getting HTTP clients ready...");
 			var apiClient = new HttpClient {
-				Timeout = TimeSpan.FromMinutes(10)
+				Timeout = TimeSpan.FromMinutes(int.Parse(_parameters.Timeout!))
 			};
 			var cookies = new CookieContainer();
 			var websiteClient = new HttpClient(new HttpClientHandler {
@@ -42,7 +34,7 @@ internal partial class UsgsScraper : IScraper {
 				CookieContainer = cookies
 			});
 			var downloadClient = new HttpClient(new HttpClientHandler { CookieContainer = cookies }) {
-				Timeout = TimeSpan.FromMinutes(10)
+				Timeout = TimeSpan.FromMinutes(int.Parse(_parameters.Timeout!))
 			};
 			Console.WriteLine("Scraping login website...");
 			var website = await websiteClient.GetAsync($"{_parameters!.Login}");
@@ -60,7 +52,7 @@ internal partial class UsgsScraper : IScraper {
 				var apiClientResponse = await apiClient.PostAsJsonAsync($"{_parameters.Api}/login", new { username = _parameters.Username, password = _parameters.Password });
 				if (apiClientResponse.IsSuccessStatusCode) {
 					Console.WriteLine("Logged in successfully");
-					var token = JsonConvert.DeserializeObject<Shared.Usgs.LoginResponse>(await apiClientResponse.Content.ReadAsStringAsync());
+					var token = JsonConvert.DeserializeObject<LoginResponse>(await apiClientResponse.Content.ReadAsStringAsync());
 					apiClient.DefaultRequestHeaders.Add("X-Auth-Token", token!.Data);
 					Console.WriteLine("Preparing scene search payload...");
 					var payload = new {
@@ -171,27 +163,6 @@ internal partial class UsgsScraper : IScraper {
 
 	[GeneratedRegex("name=\"csrf\" value=\"(.+?)\"")]
 	private static partial Regex CsrfRegex();
-
-	private static (double latitude, double longitude) CalculateCentroid(IReadOnlyCollection<IPosition> vertexes) {
-		var x = 0.0;
-		var y = 0.0;
-		var z = 0.0;
-		foreach (var vertex in vertexes) {
-			var latitude = vertex.Latitude;
-			var longitude = vertex.Longitude;
-			latitude *= Math.PI / 180;
-			longitude *= Math.PI / 180;
-			x += Math.Cos(latitude) * Math.Cos(longitude);
-			y += Math.Cos(latitude) * Math.Sin(longitude);
-			z += Math.Sin(latitude);
-		}
-		var centroidLongitude = Math.Atan2(y, x);
-		var hyperbola = Math.Sqrt(x * x + y * y);
-		var centroidLatitude = Math.Atan2(z, hyperbola);
-		centroidLatitude *= 180 / Math.PI;
-		centroidLongitude *= 180 / Math.PI;
-		return (centroidLatitude, centroidLongitude);
-	}
 
 	[GeneratedRegex("data-productId=\"(.+?)\"")]
 	private static partial Regex DataProductIdRegex();
