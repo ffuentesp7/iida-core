@@ -90,7 +90,9 @@ var mySqlParameters = new Iida.Shared.MySql.Parameters {
 };
 var rabbitMqParameters = new Iida.Shared.RabbitMq.Parameters {
 	Hostname = rabbitMqHostname,
-	Queue = rabbitMqQueue
+	Password = rabbitMqPassword,
+	Queue = rabbitMqQueue,
+	Username = rabbitMqUsername
 };
 var usgsParameters = new Iida.Shared.Usgs.Parameters {
 	Api = usgsApi,

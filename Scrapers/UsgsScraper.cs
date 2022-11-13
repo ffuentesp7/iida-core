@@ -122,6 +122,7 @@ internal partial class UsgsScraper : IScraper {
 								}
 								Console.WriteLine($"Scene {result.entityId}: downloading scene...");
 								try {
+									_ = Directory.CreateDirectory(downloadPath);
 									using (var download = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead)) {
 										using (var from = await download.Content.ReadAsStreamAsync()) {
 											using (var to = File.OpenWrite(Path.Combine(downloadPath, "bands.tar"))) {
