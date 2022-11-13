@@ -17,7 +17,8 @@ namespace Iida.Core.Scrapers;
 
 internal partial class UsgsScraper : IScraper {
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "Download breaks if using the simplified using statement")]
-	public async Task<IEnumerable<string>> Execute(Order order, string tempFolder, params Configuration[] configurations) {
+	public async Task<(IEnumerable<string>, IEnumerable<string>)> Execute(Order order, string tempFolder, params Configuration[] configurations) {
+		var dates = new List<string>();
 		var paths = new List<string>();
 		try {
 			Console.WriteLine("Calculating centroid of polygon...");
@@ -159,7 +160,7 @@ internal partial class UsgsScraper : IScraper {
 		} catch (ArgumentNullException) {
 			Console.WriteLine("Null argument detected");
 		}
-		return paths;
+		return (dates, paths);
 	}
 
 	[GeneratedRegex("name=\"csrf\" value=\"(.+?)\"")]
