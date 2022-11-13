@@ -17,7 +17,8 @@ namespace Iida.Core.Scrapers;
 
 internal partial class UsgsScraper : IScraper {
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "Download breaks if using the simplified using statement")]
-	public async Task Execute(Order order, string tempFolder, params Configuration[] configurations) {
+	public async Task<IEnumerable<string>> Execute(Order order, string tempFolder, params Configuration[] configurations) {
+		var paths = new List<string>();
 		try {
 			Console.WriteLine("Calculating centroid of polygon...");
 			var polygon = (Polygon)order.FeatureCollection!.Features[0].Geometry;
@@ -113,7 +114,7 @@ internal partial class UsgsScraper : IScraper {
 								try {
 									var downloadPath = $"{Path.Combine(tempFolder, result.entityId!)}";
 									_ = Directory.CreateDirectory(downloadPath);
-									Console.WriteLine($"Scene {result.entityId}: downloading scene...");
+									Console.WriteLine($"Scene {result.entityId}: downloading scene from {downloadUrl}...");
 									using (var download = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead)) {
 										using (var from = await download.Content.ReadAsStreamAsync()) {
 											using (var to = File.OpenWrite(Path.Combine(downloadPath, $"{result.entityId}.tar"))) {
@@ -125,6 +126,7 @@ internal partial class UsgsScraper : IScraper {
 									var tar = TarArchive.CreateInputTarArchive(File.OpenRead(Path.Combine(downloadPath, $"{result.entityId}.tar")), Encoding.UTF8);
 									tar.ExtractContents($"{Path.Combine(Path.GetTempPath(), "iida", $"{result.entityId}")}");
 									tar.Close();
+									paths.Add(downloadPath);
 									Console.WriteLine($"Scene {result.entityId}: complete");
 								} catch {
 									Console.WriteLine("Something happened while processing the scene/files");
@@ -157,6 +159,7 @@ internal partial class UsgsScraper : IScraper {
 		} catch (ArgumentNullException) {
 			Console.WriteLine("Null argument detected");
 		}
+		return paths;
 	}
 
 	[GeneratedRegex("name=\"csrf\" value=\"(.+?)\"")]
