@@ -114,6 +114,12 @@ internal partial class UsgsScraper : IScraper {
 								} catch {
 									Console.WriteLine($"Scene {result!.entityId}: No old download directory found");
 								}
+								Console.WriteLine($"Scene {result!.entityId}: downloading scene...");
+								using (var download = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead)) {
+									using var from = await download.Content.ReadAsStreamAsync();
+									using var to = File.OpenWrite(Path.Combine(downloadPath, "bands.tar"));
+									await from.CopyToAsync(to);
+								}
 							} else {
 								Console.WriteLine("Error scraping download website");
 							}
