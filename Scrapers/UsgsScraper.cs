@@ -8,7 +8,6 @@ using GeoJSON.Net.Geometry;
 using ICSharpCode.SharpZipLib.Tar;
 
 using Iida.Shared;
-using Iida.Shared.GoogleCloud;
 using Iida.Shared.Requests;
 using Iida.Shared.Usgs;
 
@@ -18,7 +17,7 @@ namespace Iida.Core.Scrapers;
 
 internal partial class UsgsScraper : IScraper {
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "Download breaks if using the simplified using statement")]
-	public async Task Execute(Order order, params Configuration[] configurations) {
+	public async Task Execute(Order order, string tempFolder, params Configuration[] configurations) {
 		try {
 			Console.WriteLine("Calculating centroid of polygon...");
 			var polygon = (Polygon)order.FeatureCollection!.Features[0].Geometry;
@@ -26,9 +25,7 @@ internal partial class UsgsScraper : IScraper {
 			var vertexes = lineString.Coordinates;
 			var (latitude, longitude) = CalculateCentroid(vertexes);
 			Console.WriteLine($"Centroid calculated: ({latitude}; {longitude})");
-			var googleCloudParameters = (Shared.GoogleCloud.Parameters)configurations[0];
-			var googleCloudStorage = new GoogleCloudStorage(googleCloudParameters);
-			var usgsParameters = (Shared.Usgs.Parameters)configurations[1];
+			var usgsParameters = (Shared.Usgs.Parameters)configurations[0];
 			Console.WriteLine("Getting HTTP clients ready...");
 			var apiClient = new HttpClient {
 				Timeout = TimeSpan.FromMinutes(10)
@@ -113,11 +110,8 @@ internal partial class UsgsScraper : IScraper {
 								var resultDataProductIdMatch = resultDataProductIdRegex.Match(queryContent);
 								var resultDataProductId = resultDataProductIdMatch.Value.Split('"')[1];
 								var downloadUrl = $"{usgsParameters.DownloadScene}/{resultDataProductId}/{result.entityId}/EE/";
-								var tempFolder = $"{Path.Combine(Path.GetTempPath(), "iida")}";
-								Console.WriteLine($"Scene {result.entityId}: create temp folder...");
 								try {
-									_ = Directory.CreateDirectory(tempFolder);
-									var downloadPath = $"{Path.Combine(tempFolder, result.entityId)}";
+									var downloadPath = $"{Path.Combine(tempFolder, result.entityId!)}";
 									_ = Directory.CreateDirectory(downloadPath);
 									Console.WriteLine($"Scene {result.entityId}: downloading scene...");
 									using (var download = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead)) {

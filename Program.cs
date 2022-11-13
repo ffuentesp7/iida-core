@@ -113,17 +113,24 @@ using (var connection = factory.CreateConnection()) {
 	channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
 	Console.WriteLine("Waiting for order requests...");
 	var consumer = new EventingBasicConsumer(channel);
-	consumer.Received += (sender, ea) => {
+	consumer.Received += async (sender, ea) => {
 		try {
+			Console.WriteLine($"Creating temp folder...");
+			var tempFolder = $"{Path.Combine(Path.GetTempPath(), "iida")}";
+			_ = Directory.CreateDirectory(tempFolder);
 			var body = ea.Body.ToArray();
 			var message = Encoding.UTF8.GetString(body);
 			Console.WriteLine($"Received order: {message}");
 			var order = JsonConvert.DeserializeObject<Order>(message);
 			scraperContext.SetStrategy(new UsgsScraper());
-			scraperContext.ExecuteStrategy(order!, googleCloudParameters, usgsParameters);
+			await scraperContext.ExecuteStrategy(order!, tempFolder, usgsParameters);
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+			Console.WriteLine("Deleting temp folder...");
+			Directory.Delete(tempFolder, true);
 		} catch (JsonReaderException) {
 			Console.WriteLine("GeoJSON format error");
+		} catch {
+			Console.WriteLine("Error");
 		}
 	};
 	_ = channel.BasicConsume(queue: rabbitMqQueue, autoAck: false, consumer: consumer);
