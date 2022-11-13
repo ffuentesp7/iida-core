@@ -1,10 +1,14 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.RegularExpressions;
 
 using GeoJSON.Net.Geometry;
 
+using ICSharpCode.SharpZipLib.Tar;
+
 using Iida.Shared;
+using Iida.Shared.GoogleCloud;
 using Iida.Shared.Requests;
 using Iida.Shared.Usgs;
 
@@ -22,8 +26,9 @@ internal partial class UsgsScraper : IScraper {
 			var vertexes = lineString.Coordinates;
 			var (latitude, longitude) = CalculateCentroid(vertexes);
 			Console.WriteLine($"Centroid calculated: ({latitude}; {longitude})");
-			var googleCloudParameters = (Shared.GoogleCloud.Parameters?)configurations[0];
-			var usgsParameters = (Parameters?)configurations[1];
+			var googleCloudParameters = (Shared.GoogleCloud.Parameters)configurations[0];
+			var googleCloudStorage = new GoogleCloudStorage(googleCloudParameters);
+			var usgsParameters = (Shared.Usgs.Parameters)configurations[1];
 			Console.WriteLine("Getting HTTP clients ready...");
 			var apiClient = new HttpClient {
 				Timeout = TimeSpan.FromMinutes(10)
@@ -124,8 +129,23 @@ internal partial class UsgsScraper : IScraper {
 											}
 										}
 									}
+									Console.WriteLine($"Scene {result.entityId}: Download successful. Extracting TAR");
+									var tar = TarArchive.CreateInputTarArchive(File.OpenRead(Path.Combine(downloadPath, "bands.tar")), Encoding.UTF8);
+									tar.ExtractContents($"{Path.Combine(Path.GetTempPath(), "iida", "bands")}");
+									tar.Close();
+									Console.WriteLine($"Scene {result.entityId}: Preparing scene files...");
+									var sceneFiles = Directory.GetFiles($"{Path.Combine(Path.GetTempPath(), "iida", "bands")}");
+									foreach (var sceneFile in sceneFiles) {
+										using var file = File.OpenRead(sceneFile);
+										var fileName = new FileInfo(sceneFile).Name;
+										var filePathOnBucket = $"{result.entityId}/{fileName}";
+										Console.WriteLine($"Scene {result.entityId}: Uploading {fileName} to bucket {googleCloudParameters!.StorageBucket}...");
+										_ = await googleCloudStorage.UploadFileAsync(file, filePathOnBucket);
+										Console.WriteLine($"Scene {result.entityId}: file {fileName}: Upload complete");
+									}
+									Console.WriteLine($"Scene {result.entityId}: complete");
 								} catch {
-									Console.WriteLine("Something happened while downloading the scene");
+									Console.WriteLine("Something happened while processing the scene/files");
 								}
 							} else {
 								Console.WriteLine("Error scraping download website");
