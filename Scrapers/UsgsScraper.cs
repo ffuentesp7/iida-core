@@ -15,13 +15,15 @@ namespace Iida.Core.Scrapers;
 internal partial class UsgsScraper : IScraper {
 	public async Task Execute(Order? order, Configuration?[]? configurations) {
 		try {
+			Console.WriteLine("Calculating centroid of polygon...");
 			var polygon = (Polygon)order.FeatureCollection.Features[0].Geometry;
 			var lineString = polygon.Coordinates[0];
 			var vertexes = lineString.Coordinates;
 			var (latitude, longitude) = CalculateCentroid(vertexes);
-			Console.WriteLine($"{latitude} - {longitude}");
+			Console.WriteLine($"Centroid calculated: ({latitude}; {longitude})");
 			var googleCloudParameters = (Shared.GoogleCloud.Parameters?)configurations![0];
-			var usgsParameters = (Shared.Usgs.Parameters?)configurations[1];
+			var usgsParameters = (Parameters?)configurations[1];
+			Console.WriteLine("Getting HTTP clients ready...");
 			var apiClient = new HttpClient {
 				Timeout = TimeSpan.FromMinutes(10)
 			};
@@ -33,6 +35,7 @@ internal partial class UsgsScraper : IScraper {
 			var downloadClient = new HttpClient(new HttpClientHandler { CookieContainer = cookies }) {
 				Timeout = TimeSpan.FromMinutes(10)
 			};
+			Console.WriteLine("Scraping login website...");
 			var website = await websiteClient.GetAsync($"{usgsParameters!.Login}");
 			if (website.IsSuccessStatusCode) {
 				var csrfRegex = CsrfRegex();
@@ -43,11 +46,14 @@ internal partial class UsgsScraper : IScraper {
 					new KeyValuePair<string, string>("password", usgsParameters.Password!),
 					new KeyValuePair<string, string>("csrf", csrf)
 				};
+				Console.WriteLine("Logging in...");
 				var websiteLogin = await websiteClient.PostAsync($"{usgsParameters.Login}", new FormUrlEncodedContent(data));
 				var apiClientResponse = await apiClient.PostAsJsonAsync($"{usgsParameters.Api}/login", new { username = usgsParameters.Username, password = usgsParameters.Password });
 				if (apiClientResponse.IsSuccessStatusCode) {
+					Console.WriteLine("Logged in successfully!");
 					var token = JsonConvert.DeserializeObject<Shared.Usgs.LoginResponse>(await apiClientResponse.Content.ReadAsStringAsync());
 					apiClient.DefaultRequestHeaders.Add("X-Auth-Token", token!.Data);
+					Console.WriteLine("Preparing scene search payload...");
 					var payload = new {
 						datasetName = usgsParameters.Dataset,
 						sceneFilter = new {
@@ -68,8 +74,10 @@ internal partial class UsgsScraper : IScraper {
 							}
 						}
 					};
+					Console.WriteLine("Searching for scenes...");
 					var apiClientResponse1 = await apiClient.PostAsJsonAsync($"{usgsParameters.Api}/scene-search", payload);
 					if (apiClientResponse1.IsSuccessStatusCode) {
+						Console.WriteLine("Scene search successful!");
 						var dataProductId = usgsParameters.Dataset switch {
 							"landsat_tm_c1" => DataProductId.LandsatTmC1,
 							"landsat_etm_c1" => DataProductId.LandsatEtmC1,
@@ -83,20 +91,46 @@ internal partial class UsgsScraper : IScraper {
 							"sentinel_2a" => DataProductId.Sentinel2a,
 							_ => null
 						};
-						var jsonResponse = JsonConvert.DeserializeObject<SearchSceneResponse>(await apiClientResponse1.Content.ReadAsStringAsync())!;
-						Console.WriteLine(jsonResponse.sessionId);
+						var searchSceneResponse = JsonConvert.DeserializeObject<SearchSceneResponse>(await apiClientResponse1.Content.ReadAsStringAsync())!;
+						foreach (var result in searchSceneResponse.data!.results!) {
+							Console.WriteLine($"Checking scene {result!.entityId}...");
+							if (double.Parse(result.cloudCover!) > double.Parse(usgsParameters.CloudCover!)) {
+								Console.WriteLine($"Scene exceeds maximum cloud cover ({usgsParameters.CloudCover}%)");
+								continue;
+							}
+							var downloadWebsiteResponse = await websiteClient.GetAsync($"{usgsParameters.SearchScene}/{dataProductId!.Value}/{result.entityId}");
+							Console.WriteLine($"Scene {result!.entityId}: Scraping download website...");
+							if (downloadWebsiteResponse.IsSuccessStatusCode) {
+								var resultDataProductIdRegex = DataProductIdRegex();
+								var queryContent = await downloadWebsiteResponse.Content.ReadAsStringAsync();
+								var resultDataProductIdMatch = resultDataProductIdRegex.Match(queryContent);
+								var resultDataProductId = resultDataProductIdMatch.Value.Split('"')[1];
+								var downloadUrl = $"{usgsParameters.DownloadScene}/{resultDataProductId}/{result.entityId}/EE/";
+								var downloadPath = $"{Path.Combine(Path.GetTempPath(), "iida")}";
+								try {
+									Directory.Delete(downloadPath, true);
+									Console.WriteLine($"Scene {result!.entityId}: Deleted old download directory");
+								} catch {
+									Console.WriteLine($"Scene {result!.entityId}: No old download directory found");
+								}
+							} else {
+								Console.WriteLine("Error scraping download website");
+							}
+						}
 					} else {
-						Console.WriteLine("API USGS scene search error");
+						Console.WriteLine("Error searching scenes");
 					}
 					var logout = await apiClient.PostAsJsonAsync($"{usgsParameters.Api}/logout", string.Empty);
 					if (logout.IsSuccessStatusCode) {
-						Console.WriteLine("Logged out from USGS API");
+						Console.WriteLine("Logged out successfully!");
 					} else {
-						Console.WriteLine("API USGS logout error");
+						Console.WriteLine("Error logging out");
 					}
 				} else {
-					Console.WriteLine("API USGS login error");
+					Console.WriteLine("Error logging in");
 				}
+			} else {
+				Console.WriteLine("Error scraping login website");
 			}
 		} catch (HttpRequestException) {
 			Console.WriteLine("Disconnected");
@@ -106,7 +140,6 @@ internal partial class UsgsScraper : IScraper {
 			Console.WriteLine("Null reference detected");
 		}
 	}
-
 	[GeneratedRegex("name=\"csrf\" value=\"(.+?)\"")]
 	private static partial Regex CsrfRegex();
 	private static (double latitude, double longitude) CalculateCentroid(IReadOnlyCollection<IPosition> vertexes) {
@@ -129,4 +162,6 @@ internal partial class UsgsScraper : IScraper {
 		centroidLongitude *= 180 / Math.PI;
 		return (centroidLatitude, centroidLongitude);
 	}
+	[GeneratedRegex("data-productId=\"(.+?)\"")]
+	private static partial Regex DataProductIdRegex();
 }

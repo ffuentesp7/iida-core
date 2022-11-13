@@ -26,6 +26,7 @@ string? mySqlConnectionString;
 string? rabbitMqHostname;
 string? rabbitMqQueue;
 string? usgsApi;
+string? usgsCloudCover;
 string? usgsDataset;
 string? usgsLogin;
 string? usgsLogout;
@@ -43,6 +44,7 @@ if (Debugger.IsAttached) {
 	rabbitMqHostname = configurationRoot.GetSection("RABBITMQ_HOST").Value;
 	rabbitMqQueue = configurationRoot.GetSection("RABBITMQ_QUEUE").Value;
 	usgsApi = configurationRoot.GetSection("USGS_API").Value;
+	usgsCloudCover = configurationRoot.GetSection("USGS_CLOUDCOVER").Value;
 	usgsDataset = configurationRoot.GetSection("USGS_DATASET").Value;
 	usgsLogin = configurationRoot.GetSection("USGS_LOGIN").Value;
 	usgsLogout = configurationRoot.GetSection("USGS_LOGOUT").Value;
@@ -60,6 +62,7 @@ if (Debugger.IsAttached) {
 	rabbitMqHostname = Environment.GetEnvironmentVariable("RABBITMQ_HOST");
 	rabbitMqQueue = Environment.GetEnvironmentVariable("RABBITMQ_QUEUE");
 	usgsApi = Environment.GetEnvironmentVariable("USGS_API");
+	usgsCloudCover = Environment.GetEnvironmentVariable("USGS_CLOUDCOVER");
 	usgsDataset = Environment.GetEnvironmentVariable("USGS_DATASET");
 	usgsLogin = Environment.GetEnvironmentVariable("USGS_LOGIN");
 	usgsLogout = Environment.GetEnvironmentVariable("USGS_LOGOUT");
