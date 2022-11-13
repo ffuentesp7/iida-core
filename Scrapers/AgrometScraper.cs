@@ -31,6 +31,20 @@ internal class AgrometScraper : IScraper {
 			if (closestRequest.IsSuccessStatusCode) {
 				var closest = await closestRequest.Content.ReadAsStringAsync();
 				Console.WriteLine($"Closest station ID: {closest}");
+				foreach (var date in _dates) {
+					var url = $"{_parameters.Api}?ema_ia_id={closest}&dateFrom={DateOnly.ParseExact(date, "yyyy-MM-dd HH:mm:ss", null)}&dateTo={DateOnly.ParseExact(date, "yyyy-MM-dd HH:mm:ss", null).AddDays(1)}";
+					Console.WriteLine($"Sending request to AGROMET: {url}...");
+					var agrometRequest = new HttpRequestMessage {
+						Method = HttpMethod.Get,
+						RequestUri = new Uri(url),
+					};
+					var response = await client.SendAsync(agrometRequest);
+					if (response.IsSuccessStatusCode) {
+						Console.WriteLine(await response.Content.ReadAsStringAsync());
+					} else {
+						Console.WriteLine("Error while getting data from AGROMET");
+					}
+				}
 			} else {
 				Console.Write("Error getting closest station");
 			}
@@ -42,6 +56,8 @@ internal class AgrometScraper : IScraper {
 			Console.WriteLine("Null reference detected");
 		} catch (ArgumentNullException) {
 			Console.WriteLine("Null argument detected");
+		} catch (FormatException) {
+			Console.WriteLine("Invalid format detected");
 		}
 	}
 }
