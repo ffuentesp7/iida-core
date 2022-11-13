@@ -122,10 +122,11 @@ using (var connection = factory.CreateConnection()) {
 			var message = Encoding.UTF8.GetString(body);
 			Console.WriteLine($"Received order: {message}");
 			var order = JsonConvert.DeserializeObject<Order>(message);
-			scraperContext.SetStrategy(new UsgsScraper(tempFolder, usgsParameters));
-			var usgs = await scraperContext.ExecuteStrategy(order!);
-			scraperContext.SetStrategy(new AgrometScraper(tempFolder, agrometParameters));
-			var agromet = await scraperContext.ExecuteStrategy(order!);
+			var usgsScraper = new UsgsScraper(tempFolder, usgsParameters);
+			scraperContext.SetStrategy(usgsScraper);
+			await scraperContext.ExecuteStrategy(order!);
+			var agrometScraper = new AgrometScraper(tempFolder, usgsScraper.Dates, agrometParameters);
+			scraperContext.SetStrategy(agrometScraper);
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 			Console.WriteLine("Deleting temp folder...");
 			Directory.Delete(tempFolder, true);

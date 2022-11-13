@@ -5,5 +5,5 @@ namespace Iida.Core.Scrapers;
 internal class ScraperContext {
 	private IScraper? _scraperStrategy;
 	public void SetStrategy(IScraper scraperStrategy) => _scraperStrategy = scraperStrategy;
-	public Task<(IEnumerable<string>, IEnumerable<string>)> ExecuteStrategy(Order order) => _scraperStrategy!.Execute(order);
+	public Task ExecuteStrategy(Order order) => _scraperStrategy!.Execute(order);
 }

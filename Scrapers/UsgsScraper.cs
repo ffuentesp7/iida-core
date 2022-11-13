@@ -17,14 +17,14 @@ namespace Iida.Core.Scrapers;
 internal partial class UsgsScraper : IScraper {
 	private readonly string _tempFolder;
 	private readonly Parameters _parameters;
+	public List<string> Dates { get; set; } = new List<string>();
+	public List<string> Paths { get; set; } = new List<string>();
 	public UsgsScraper(string tempFolder, Parameters parameters) {
 		_tempFolder = tempFolder;
 		_parameters = parameters;
 	}
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "Download breaks if using the simplified using statement")]
-	public async Task<(IEnumerable<string>, IEnumerable<string>)> Execute(Order order) {
-		var dates = new List<string>();
-		var paths = new List<string>();
+	public async Task Execute(Order order) {
 		try {
 			Console.WriteLine("Calculating centroid of polygon...");
 			var polygon = (Polygon)order.FeatureCollection!.Features[0].Geometry;
@@ -108,6 +108,9 @@ internal partial class UsgsScraper : IScraper {
 								Console.WriteLine($"Scene exceeds maximum cloud cover ({_parameters.CloudCover}%)");
 								continue;
 							}
+							var startDate = result.temporalCoverage!.startDate;
+							Console.WriteLine($"Scene {result.entityId}: temporalCoverage.startDate is {startDate}");
+							Dates.Add(startDate!);
 							Console.WriteLine($"Scene {result.entityId}: Scraping download website...");
 							var downloadWebsiteResponse = await websiteClient.GetAsync($"{_parameters.SearchScene}/{dataProductId!.Value}/{result.entityId}");
 							if (downloadWebsiteResponse.IsSuccessStatusCode) {
@@ -131,7 +134,7 @@ internal partial class UsgsScraper : IScraper {
 									var tar = TarArchive.CreateInputTarArchive(File.OpenRead(Path.Combine(downloadPath, $"{result.entityId}.tar")), Encoding.UTF8);
 									tar.ExtractContents($"{Path.Combine(Path.GetTempPath(), "iida", $"{result.entityId}")}");
 									tar.Close();
-									paths.Add(downloadPath);
+									Paths.Add(downloadPath);
 									Console.WriteLine($"Scene {result.entityId}: complete");
 								} catch {
 									Console.WriteLine("Something happened while processing the scene/files");
@@ -164,7 +167,6 @@ internal partial class UsgsScraper : IScraper {
 		} catch (ArgumentNullException) {
 			Console.WriteLine("Null argument detected");
 		}
-		return (dates, paths);
 	}
 
 	[GeneratedRegex("name=\"csrf\" value=\"(.+?)\"")]
