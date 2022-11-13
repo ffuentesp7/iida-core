@@ -18,7 +18,7 @@ namespace Iida.Core.Scrapers;
 
 internal partial class UsgsScraper : IScraper {
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "Download breaks if using the simplified using statement")]
-	public async Task Execute(Order order, Configuration[] configurations) {
+	public async Task Execute(Order order, params Configuration[] configurations) {
 		try {
 			Console.WriteLine("Calculating centroid of polygon...");
 			var polygon = (Polygon)order.FeatureCollection!.Features[0].Geometry;
@@ -113,37 +113,24 @@ internal partial class UsgsScraper : IScraper {
 								var resultDataProductIdMatch = resultDataProductIdRegex.Match(queryContent);
 								var resultDataProductId = resultDataProductIdMatch.Value.Split('"')[1];
 								var downloadUrl = $"{usgsParameters.DownloadScene}/{resultDataProductId}/{result.entityId}/EE/";
-								var downloadPath = $"{Path.Combine(Path.GetTempPath(), "iida")}";
+								var tempFolder = $"{Path.Combine(Path.GetTempPath(), "iida")}";
+								Console.WriteLine($"Scene {result.entityId}: create temp folder...");
 								try {
-									Directory.Delete(downloadPath, true);
-									Console.WriteLine($"Scene {result.entityId}: Deleted old download directory");
-								} catch {
-									Console.WriteLine($"Scene {result.entityId}: No old download directory found");
-								}
-								Console.WriteLine($"Scene {result.entityId}: downloading scene...");
-								try {
+									_ = Directory.CreateDirectory(tempFolder);
+									var downloadPath = $"{Path.Combine(tempFolder, result.entityId)}";
 									_ = Directory.CreateDirectory(downloadPath);
+									Console.WriteLine($"Scene {result.entityId}: downloading scene...");
 									using (var download = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead)) {
 										using (var from = await download.Content.ReadAsStreamAsync()) {
-											using (var to = File.OpenWrite(Path.Combine(downloadPath, "bands.tar"))) {
+											using (var to = File.OpenWrite(Path.Combine(downloadPath, $"{result.entityId}.tar"))) {
 												await from.CopyToAsync(to);
 											}
 										}
 									}
 									Console.WriteLine($"Scene {result.entityId}: Download successful. Extracting TAR");
-									var tar = TarArchive.CreateInputTarArchive(File.OpenRead(Path.Combine(downloadPath, "bands.tar")), Encoding.UTF8);
-									tar.ExtractContents($"{Path.Combine(Path.GetTempPath(), "iida", "bands")}");
+									var tar = TarArchive.CreateInputTarArchive(File.OpenRead(Path.Combine(downloadPath, $"{result.entityId}.tar")), Encoding.UTF8);
+									tar.ExtractContents($"{Path.Combine(Path.GetTempPath(), "iida", $"{result.entityId}")}");
 									tar.Close();
-									Console.WriteLine($"Scene {result.entityId}: Preparing scene files...");
-									var sceneFiles = Directory.GetFiles($"{Path.Combine(Path.GetTempPath(), "iida", "bands")}");
-									foreach (var sceneFile in sceneFiles) {
-										using var file = File.OpenRead(sceneFile);
-										var fileName = new FileInfo(sceneFile).Name;
-										var filePathOnBucket = $"{result.entityId}/{fileName}";
-										Console.WriteLine($"Scene {result.entityId}: Uploading {fileName} to bucket {googleCloudParameters!.StorageBucket}...");
-										_ = await googleCloudStorage.UploadFileAsync(file, filePathOnBucket);
-										Console.WriteLine($"Scene {result.entityId}: file {fileName}: Upload complete");
-									}
 									Console.WriteLine($"Scene {result.entityId}: complete");
 								} catch {
 									Console.WriteLine("Something happened while processing the scene/files");

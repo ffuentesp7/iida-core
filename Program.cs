@@ -120,7 +120,7 @@ using (var connection = factory.CreateConnection()) {
 			Console.WriteLine($"Received order: {message}");
 			var order = JsonConvert.DeserializeObject<Order>(message);
 			scraperContext.SetStrategy(new UsgsScraper());
-			scraperContext.ExecuteStrategy(order!, new Iida.Shared.Configuration[] { googleCloudParameters, usgsParameters });
+			scraperContext.ExecuteStrategy(order!, googleCloudParameters, usgsParameters);
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 		} catch (JsonReaderException) {
 			Console.WriteLine("GeoJSON format error");
