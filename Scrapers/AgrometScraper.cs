@@ -7,20 +7,20 @@ using CsvHelper.Configuration;
 using CsvHelper.Configuration.Attributes;
 
 using Iida.Shared.Agromet;
-using Iida.Shared.Requests;
+using Iida.Shared.Models;
 
 using Oware;
 
 namespace Iida.Core.Scrapers;
 
 internal class AgrometScraper : IScraper {
-	private readonly string _tempFolder;
+	private readonly string _userFolder;
 	private readonly IEnumerable<string> _dates;
 	private readonly List<string> _entityIds;
 	private readonly Parameters _parameters;
 	public List<string> Paths { get; set; } = new List<string>();
-	public AgrometScraper(string tempFolder, IEnumerable<string> dates, List<string> entityIds, Parameters parameters) {
-		_tempFolder = tempFolder;
+	public AgrometScraper(string userFolder, IEnumerable<string> dates, List<string> entityIds, Parameters parameters) {
+		_userFolder = userFolder;
 		_dates = dates;
 		_parameters = parameters;
 		_entityIds = entityIds;
@@ -79,7 +79,7 @@ internal class AgrometScraper : IScraper {
 							entries.Add(entry);
 						}
 						Console.WriteLine($"Date {date}: Writing CSV file...");
-						var path = Path.Combine(_tempFolder, $"{_entityIds[scene]}", $"{_entityIds[scene++]}.csv");
+						var path = Path.Combine(_userFolder, $"{_entityIds[scene]}", $"{_entityIds[scene++]}.csv");
 						using var streamWriter = new StreamWriter(path);
 						using var csvWriter = new CsvWriter(streamWriter, csvConfig);
 						csvWriter.WriteHeader<Entry>();

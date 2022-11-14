@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 using ICSharpCode.SharpZipLib.Tar;
 
-using Iida.Shared.Requests;
+using Iida.Shared.Models;
 using Iida.Shared.Usgs;
 
 using Newtonsoft.Json;
@@ -13,13 +13,13 @@ using Newtonsoft.Json;
 namespace Iida.Core.Scrapers;
 
 internal partial class UsgsScraper : IScraper {
-	private readonly string _tempFolder;
+	private readonly string _userFolder;
 	private readonly Parameters _parameters;
 	public List<string> Dates { get; set; } = new List<string>();
 	public List<string> Paths { get; set; } = new List<string>();
 	public List<string> EntityIds { get; set; } = new List<string>();
-	public UsgsScraper(string tempFolder, Parameters parameters) {
-		_tempFolder = tempFolder;
+	public UsgsScraper(string userFolder, Parameters parameters) {
+		_userFolder = userFolder;
 		_parameters = parameters;
 	}
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "Download breaks if using the simplified using statement")]
@@ -114,7 +114,7 @@ internal partial class UsgsScraper : IScraper {
 								var resultDataProductId = resultDataProductIdMatch.Value.Split('"')[1];
 								var downloadUrl = $"{_parameters.DownloadScene}/{resultDataProductId}/{result.entityId}/EE/";
 								try {
-									var downloadPath = $"{Path.Combine(_tempFolder, result.entityId!)}";
+									var downloadPath = $"{Path.Combine(_userFolder, result.entityId!)}";
 									_ = Directory.CreateDirectory(downloadPath);
 									Console.WriteLine($"Scene {result.entityId}: downloading scene from {downloadUrl}...");
 									using (var download = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead)) {

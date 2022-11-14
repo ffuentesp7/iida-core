@@ -5,7 +5,7 @@ using GeoJSON.Net.Geometry;
 
 using Iida.Core;
 using Iida.Core.Scrapers;
-using Iida.Shared.Requests;
+using Iida.Shared.Models;
 
 using Microsoft.Extensions.Configuration;
 
@@ -123,27 +123,27 @@ using (var connection = factory.CreateConnection()) {
 	consumer.Received += async (sender, ea) => {
 		try {
 			Console.WriteLine($"Creating temp folder...");
-			var tempFolder = $"{Path.Combine(Path.GetTempPath(), "iida")}";
-			_ = Directory.CreateDirectory(tempFolder);
+			var userFolder = $"{Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "iida")}";
+			_ = Directory.CreateDirectory(userFolder);
 			var body = ea.Body.ToArray();
 			var message = Encoding.UTF8.GetString(body);
 			Console.WriteLine($"Order received");
 			var order = JsonConvert.DeserializeObject<Order>(message);
 			Console.WriteLine("Calculating centroid of polygon...");
-			var polygon = (Polygon)order!.FeatureCollection!.Features[0].Geometry;
+			var polygon = (Polygon)order!.GeoJson!.Features[0].Geometry;
 			var lineString = polygon.Coordinates[0];
 			var vertexes = lineString.Coordinates;
 			var (latitude, longitude) = Centroid.Calculate(vertexes);
 			Console.WriteLine($"Centroid calculated: ({latitude}; {longitude})");
-			var usgsScraper = new UsgsScraper(tempFolder, usgsParameters);
+			var usgsScraper = new UsgsScraper(userFolder, usgsParameters);
 			scraperContext.SetStrategy(usgsScraper);
 			await scraperContext.ExecuteStrategy(order!, latitude, longitude);
-			var agrometScraper = new AgrometScraper(tempFolder, usgsScraper.Dates, usgsScraper.EntityIds, agrometParameters);
+			var agrometScraper = new AgrometScraper(userFolder, usgsScraper.Dates, usgsScraper.EntityIds, agrometParameters);
 			scraperContext.SetStrategy(agrometScraper);
 			await scraperContext.ExecuteStrategy(order!, latitude, longitude);
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 			Console.WriteLine("Deleting temp folder...");
-			Directory.Delete(tempFolder, true);
+			Directory.Delete(userFolder, true);
 		} catch (JsonReaderException) {
 			Console.WriteLine("GeoJSON format error");
 		} catch {
