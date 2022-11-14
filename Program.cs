@@ -31,7 +31,6 @@ string? rabbitMqPassword;
 string? rabbitMqQueue;
 string? rabbitMqUsername;
 string? usgsApi;
-string? usgsCloudCover;
 string? usgsDataset;
 string? usgsLogin;
 string? usgsLogout;
@@ -53,7 +52,6 @@ if (Debugger.IsAttached) {
 	rabbitMqQueue = configurationRoot.GetSection("RABBITMQ_QUEUE").Value;
 	rabbitMqUsername = configurationRoot.GetSection("RABBITMQ_USERNAME").Value;
 	usgsApi = configurationRoot.GetSection("USGS_API").Value;
-	usgsCloudCover = configurationRoot.GetSection("USGS_CLOUD_COVER").Value;
 	usgsDataset = configurationRoot.GetSection("USGS_DATASET").Value;
 	usgsLogin = configurationRoot.GetSection("USGS_LOGIN").Value;
 	usgsLogout = configurationRoot.GetSection("USGS_LOGOUT").Value;
@@ -75,7 +73,6 @@ if (Debugger.IsAttached) {
 	rabbitMqQueue = Environment.GetEnvironmentVariable("RABBITMQ_QUEUE");
 	rabbitMqUsername = Environment.GetEnvironmentVariable("RABBITMQ_USERNAME");
 	usgsApi = Environment.GetEnvironmentVariable("USGS_API");
-	usgsCloudCover = Environment.GetEnvironmentVariable("USGS_CLOUD_COVER");
 	usgsDataset = Environment.GetEnvironmentVariable("USGS_DATASET");
 	usgsLogin = Environment.GetEnvironmentVariable("USGS_LOGIN");
 	usgsLogout = Environment.GetEnvironmentVariable("USGS_LOGOUT");
@@ -106,7 +103,6 @@ var rabbitMqParameters = new Iida.Shared.RabbitMq.Parameters {
 };
 var usgsParameters = new Iida.Shared.Usgs.Parameters {
 	Api = usgsApi,
-	CloudCover = usgsCloudCover,
 	Dataset = usgsDataset,
 	Login = usgsLogin,
 	Logout = usgsLogout,

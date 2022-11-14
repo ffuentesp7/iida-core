@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net7.0</TargetFramework>
+		<TargetFramework>net6.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<UserSecretsId>975b025f-e20d-4b24-95a0-4b1726d2583a</UserSecretsId>
@@ -10,8 +10,13 @@
 		<PackageReference Include="CsvHelper" Version="30.0.1" />
 		<PackageReference Include="GeoJSON.Net" Version="1.2.19" />
 		<PackageReference Include="Google.Cloud.Storage.V1" Version="4.1.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.4">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 		<PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="7.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+		<PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="6.0.2" />
 		<PackageReference Include="RabbitMQ.Client" Version="6.4.0" />
 		<PackageReference Include="SharpZipLib" Version="1.4.1" />
 	</ItemGroup>

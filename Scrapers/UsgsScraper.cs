@@ -40,7 +40,7 @@ internal partial class UsgsScraper : IScraper {
 			Console.WriteLine("Scraping login website...");
 			var website = await websiteClient.GetAsync($"{_parameters!.Login}");
 			if (website.IsSuccessStatusCode) {
-				var csrfRegex = CsrfRegex();
+				var csrfRegex = new Regex("name=\"csrf\" value=\"(.+?)\"");
 				var getSessionContent = await website.Content.ReadAsStringAsync();
 				var csrf = csrfRegex.Matches(getSessionContent)[0].Value.Split('"')[3];
 				var data = new[] {
@@ -97,8 +97,8 @@ internal partial class UsgsScraper : IScraper {
 						Console.WriteLine($"Found {searchSceneResponse!.data!.recordsReturned} scenes");
 						foreach (var result in searchSceneResponse.data.results!) {
 							Console.WriteLine($"Checking scene {result!.entityId}...");
-							if (double.Parse(result.cloudCover!) > double.Parse(_parameters.CloudCover!)) {
-								Console.WriteLine($"Scene exceeds maximum cloud cover ({_parameters.CloudCover}%)");
+							if (double.Parse(result.cloudCover!) > double.Parse(order.CloudCover!)) {
+								Console.WriteLine($"Scene exceeds maximum cloud cover ({order.CloudCover}%)");
 								continue;
 							}
 							EntityIds.Add(result.entityId!);
@@ -108,7 +108,7 @@ internal partial class UsgsScraper : IScraper {
 							Console.WriteLine($"Scene {result.entityId}: Scraping download website...");
 							var downloadWebsiteResponse = await websiteClient.GetAsync($"{_parameters.SearchScene}/{dataProductId!.Value}/{result.entityId}");
 							if (downloadWebsiteResponse.IsSuccessStatusCode) {
-								var resultDataProductIdRegex = DataProductIdRegex();
+								var resultDataProductIdRegex = new Regex("data-productId=\"(.+?)\"");
 								var queryContent = await downloadWebsiteResponse.Content.ReadAsStringAsync();
 								var resultDataProductIdMatch = resultDataProductIdRegex.Match(queryContent);
 								var resultDataProductId = resultDataProductIdMatch.Value.Split('"')[1];
@@ -162,10 +162,4 @@ internal partial class UsgsScraper : IScraper {
 			Console.WriteLine("Null argument detected");
 		}
 	}
-
-	[GeneratedRegex("name=\"csrf\" value=\"(.+?)\"")]
-	private static partial Regex CsrfRegex();
-
-	[GeneratedRegex("data-productId=\"(.+?)\"")]
-	private static partial Regex DataProductIdRegex();
 }
