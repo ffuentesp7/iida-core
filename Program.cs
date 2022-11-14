@@ -5,7 +5,7 @@ using GeoJSON.Net.Geometry;
 
 using Iida.Core;
 using Iida.Core.Scrapers;
-using Iida.Shared.Models;
+using Iida.Shared.DataTransferObjects;
 
 using Microsoft.Extensions.Configuration;
 
@@ -19,10 +19,10 @@ if (Debugger.IsAttached) {
 	_ = builder.AddUserSecrets<Program>();
 }
 var configurationRoot = builder.Build();
-string? agrometApi;
-string? agrometHostname;
-string? agrometLocation;
-string? agrometTimeout;
+string? ranApi;
+string? ranHostname;
+string? ranLocation;
+string? ranTimeout;
 string? googleCloudCredentialFile;
 string? googleCloudStorageBucket;
 string? mySqlConnectionString;
@@ -40,10 +40,10 @@ string? usgsUsername;
 string? usgsPassword;
 string? usgsTimeout;
 if (Debugger.IsAttached) {
-	agrometApi = configurationRoot.GetSection("AGROMET_API").Value;
-	agrometHostname = configurationRoot.GetSection("AGROMET_HOSTNAME").Value;
-	agrometLocation = configurationRoot.GetSection("AGROMET_LOCATION").Value;
-	agrometTimeout = configurationRoot.GetSection("AGROMET_TIMEOUT").Value;
+	ranApi = configurationRoot.GetSection("RAN_API").Value;
+	ranHostname = configurationRoot.GetSection("RAN_HOSTNAME").Value;
+	ranLocation = configurationRoot.GetSection("RAN_LOCATION").Value;
+	ranTimeout = configurationRoot.GetSection("RAN_TIMEOUT").Value;
 	googleCloudCredentialFile = configurationRoot.GetSection("GOOGLE_CLOUD_CREDENTIAL_FILE").Value;
 	googleCloudStorageBucket = configurationRoot.GetSection("GOOGLE_CLOUD_STORAGE_BUCKET").Value;
 	mySqlConnectionString = configurationRoot.GetSection("MYSQL_CONNECTIONSTRING").Value;
@@ -61,10 +61,10 @@ if (Debugger.IsAttached) {
 	usgsPassword = configurationRoot.GetSection("USGS_PASSWORD").Value;
 	usgsTimeout = configurationRoot.GetSection("USGS_TIMEOUT").Value;
 } else {
-	agrometApi = Environment.GetEnvironmentVariable("AGROMET_API");
-	agrometHostname = Environment.GetEnvironmentVariable("AGROMET_HOSTNAME");
-	agrometLocation = Environment.GetEnvironmentVariable("AGROMET_LOCATION");
-	agrometTimeout = Environment.GetEnvironmentVariable("AGROMET_TIMEOUT");
+	ranApi = Environment.GetEnvironmentVariable("RAN_API");
+	ranHostname = Environment.GetEnvironmentVariable("RAN_HOSTNAME");
+	ranLocation = Environment.GetEnvironmentVariable("RAN_LOCATION");
+	ranTimeout = Environment.GetEnvironmentVariable("RAN_TIMEOUT");
 	googleCloudCredentialFile = Environment.GetEnvironmentVariable("GOOGLE_CLOUD_CREDENTIAL_FILE");
 	googleCloudStorageBucket = Environment.GetEnvironmentVariable("GOOGLE_CLOUD_STORAGE_BUCKET");
 	mySqlConnectionString = Environment.GetEnvironmentVariable("MYSQL_CONNECTIONSTRING");
@@ -82,11 +82,11 @@ if (Debugger.IsAttached) {
 	usgsPassword = Environment.GetEnvironmentVariable("USGS_PASSWORD");
 	usgsTimeout = Environment.GetEnvironmentVariable("USGS_TIMEOUT");
 }
-var agrometParameters = new Iida.Shared.Agromet.Parameters {
-	Api = agrometApi,
-	Hostname = agrometHostname,
-	Location = agrometLocation,
-	Timeout = agrometTimeout,
+var ranParameters = new Iida.Shared.Ran.Parameters {
+	Api = ranApi,
+	Hostname = ranHostname,
+	Location = ranLocation,
+	Timeout = ranTimeout,
 };
 var googleCloudParameters = new Iida.Shared.GoogleCloud.Parameters {
 	CredentialFile = googleCloudCredentialFile,
@@ -138,8 +138,8 @@ using (var connection = factory.CreateConnection()) {
 			var usgsScraper = new UsgsScraper(userFolder, usgsParameters);
 			scraperContext.SetStrategy(usgsScraper);
 			await scraperContext.ExecuteStrategy(order!, latitude, longitude);
-			var agrometScraper = new AgrometScraper(userFolder, usgsScraper.Dates, usgsScraper.EntityIds, agrometParameters);
-			scraperContext.SetStrategy(agrometScraper);
+			var ranScraper = new RanScraperForIidaR(userFolder, usgsScraper.Dates, usgsScraper.EntityIds, ranParameters);
+			scraperContext.SetStrategy(ranScraper);
 			await scraperContext.ExecuteStrategy(order!, latitude, longitude);
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 			Console.WriteLine("Deleting temp folder...");

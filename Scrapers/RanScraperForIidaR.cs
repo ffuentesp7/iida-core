@@ -6,20 +6,20 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using CsvHelper.Configuration.Attributes;
 
-using Iida.Shared.Agromet;
-using Iida.Shared.Models;
+using Iida.Shared.DataTransferObjects;
+using Iida.Shared.Ran;
 
 using Oware;
 
 namespace Iida.Core.Scrapers;
 
-internal class AgrometScraper : IScraper {
+internal class RanScraperForIidaR : IScraper {
 	private readonly string _userFolder;
 	private readonly IEnumerable<string> _dates;
 	private readonly List<string> _entityIds;
 	private readonly Parameters _parameters;
 	public List<string> Paths { get; set; } = new List<string>();
-	public AgrometScraper(string userFolder, IEnumerable<string> dates, List<string> entityIds, Parameters parameters) {
+	public RanScraperForIidaR(string userFolder, IEnumerable<string> dates, List<string> entityIds, Parameters parameters) {
 		_userFolder = userFolder;
 		_dates = dates;
 		_parameters = parameters;
@@ -104,19 +104,18 @@ internal class AgrometScraper : IScraper {
 			Console.WriteLine("Invalid format detected");
 		}
 	}
-}
-
-internal class Entry {
-	[Index(0), Name("Date")]
-	public string? Date { get; set; }
-	[Index(1), Name(name: "Time")]
-	public string? Time { get; set; }
-	[Index(2), Name("Rad")]
-	public string? MaximumSolarRadiation { get; set; }
-	[Index(3), Name("wind_dir")]
-	public string? WindDirection { get; set; }
-	[Index(4), Name("RH")]
-	public string? AverageRelativeHumidity { get; set; }
-	[Index(5), Name("temp")]
-	public string? AverageAirTemperature { get; set; }
+	internal class Entry {
+		[Index(0), Name("Date")]
+		public string? Date { get; set; }
+		[Index(1), Name(name: "Time")]
+		public string? Time { get; set; }
+		[Index(2), Name("Rad")]
+		public string? MaximumSolarRadiation { get; set; }
+		[Index(3), Name("wind_dir")]
+		public string? WindDirection { get; set; }
+		[Index(4), Name("RH")]
+		public string? AverageRelativeHumidity { get; set; }
+		[Index(5), Name("temp")]
+		public string? AverageAirTemperature { get; set; }
+	}
 }
