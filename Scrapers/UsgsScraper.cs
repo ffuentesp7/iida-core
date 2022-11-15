@@ -119,14 +119,14 @@ internal partial class UsgsScraper : IScraper {
 									Console.WriteLine($"Scene {result.entityId}: downloading scene from {downloadUrl}...");
 									using (var download = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead)) {
 										using (var from = await download.Content.ReadAsStreamAsync()) {
-											using (var to = File.OpenWrite(Path.Combine(downloadPath, $"{result.entityId}.tar"))) {
+											using (var to = File.OpenWrite(Path.Combine(_userFolder, $"{result.entityId}.tar"))) {
 												await from.CopyToAsync(to);
 											}
 										}
 									}
 									Console.WriteLine($"Scene {result.entityId}: Download successful. Extracting TAR");
 									var tar = TarArchive.CreateInputTarArchive(File.OpenRead(Path.Combine(downloadPath, $"{result.entityId}.tar")), Encoding.UTF8);
-									tar.ExtractContents($"{Path.Combine(Path.GetTempPath(), "iida", $"{result.entityId}")}");
+									tar.ExtractContents($"{Path.Combine(_userFolder, $"{result.entityId}")}");
 									tar.Close();
 									Paths.Add(downloadPath);
 									Console.WriteLine($"Scene {result.entityId}: complete");
