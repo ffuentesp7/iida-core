@@ -126,7 +126,7 @@ internal partial class UsgsScraper : IScraper {
 									}
 									Console.WriteLine($"Scene {result.entityId}: Download successful. Extracting TAR");
 									var tar = TarArchive.CreateInputTarArchive(File.OpenRead(Path.Combine(downloadPath, $"{result.entityId}.tar")), Encoding.UTF8);
-									tar.ExtractContents($"{Path.Combine(downloadPath, $"{result.entityId}")}");
+									tar.ExtractContents($"{Path.Combine(downloadPath)}");
 									tar.Close();
 									Urls.Add(downloadPath);
 									Console.WriteLine($"Scene {result.entityId}: complete");
