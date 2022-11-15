@@ -128,13 +128,15 @@ using (var connection = factory.CreateConnection()) {
 			var body = ea.Body.ToArray();
 			var message = Encoding.UTF8.GetString(body);
 			Console.WriteLine($"Order received");
-			var order = JsonConvert.DeserializeObject<Order>(message);
+			var request = JsonConvert.DeserializeObject<Request>(message);
 			Console.WriteLine("Calculating centroid of polygon...");
-			var polygon = (Polygon)order!.GeoJson!.Features[0].Geometry;
+			var polygon = (Polygon)request!.GeoJson!.Features[0].Geometry;
 			var lineString = polygon.Coordinates[0];
 			var vertexes = lineString.Coordinates;
 			var (latitude, longitude) = Centroid.Calculate(vertexes);
 			Console.WriteLine($"Centroid calculated: ({latitude}; {longitude})");
+			Console.WriteLine($"Creating order...");
+
 			var usgsScraper = new UsgsScraper(userFolder, usgsParameters);
 			scraperContext.SetStrategy(usgsScraper);
 			await scraperContext.ExecuteStrategy(order!, latitude, longitude);
