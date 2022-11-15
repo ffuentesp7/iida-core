@@ -8,6 +8,7 @@ using Iida.Core.Contexts;
 using Iida.Core.Scrapers;
 using Iida.Shared.DataTransferObjects;
 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 using Newtonsoft.Json;
@@ -131,7 +132,7 @@ using (var connection = factory.CreateConnection()) {
 			Console.WriteLine($"Order received. Processing now...");
 			var queueRequest = JsonConvert.DeserializeObject<QueueRequest>(message);
 			using var context = new AppDbContext(mySqlConnectionString!);
-			var order = context.Orders!.Where(o => o.Guid == queueRequest!.Guid).FirstOrDefault();
+			var order = await context.Orders!.FirstOrDefaultAsync(o => o.Guid == queueRequest!.Guid);
 			order!.Status = "Processing";
 			_ = await context.SaveChangesAsync();
 			Console.WriteLine("Calculating centroid of polygon...");
