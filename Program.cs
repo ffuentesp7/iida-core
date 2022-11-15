@@ -84,7 +84,7 @@ if (Debugger.IsAttached) {
 	usgsPassword = Environment.GetEnvironmentVariable("USGS_PASSWORD");
 	usgsTimeout = Environment.GetEnvironmentVariable("USGS_TIMEOUT");
 }
-var ranParameters = new Iida.Shared.Ran.Parameters {
+var ranParameters = new Iida.Shared.RanForIidaR.Parameters {
 	Api = ranApi,
 	Hostname = ranHostname,
 	Location = ranLocation,
@@ -144,8 +144,8 @@ using (var connection = factory.CreateConnection()) {
 			var usgsScraper = new UsgsScraper(userFolder, usgsParameters);
 			scraperContext.SetStrategy(usgsScraper);
 			await scraperContext.ExecuteStrategy(queueRequest!, latitude, longitude);
-			var ranScraper = new RanScraperForIidaR(userFolder, usgsScraper.Dates, usgsScraper.EntityIds, ranParameters);
-			scraperContext.SetStrategy(ranScraper);
+			var ranScraperForIidaR = new RanScraperForIidaR(userFolder, usgsScraper.Dates, usgsScraper.EntityIds, ranParameters);
+			scraperContext.SetStrategy(ranScraperForIidaR);
 			await scraperContext.ExecuteStrategy(queueRequest!, latitude, longitude);
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 			order!.Status = "Completed";
