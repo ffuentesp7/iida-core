@@ -18,7 +18,7 @@ internal class RanScraperForIidaR : IScraper {
 	private readonly IEnumerable<string> _dates;
 	private readonly List<string> _entityIds;
 	private readonly Parameters _parameters;
-	public List<string> Paths { get; set; } = new List<string>();
+	public List<string> Urls { get; set; } = new List<string>();
 	public RanScraperForIidaR(string userFolder, IEnumerable<string> dates, List<string> entityIds, Parameters parameters) {
 		_userFolder = userFolder;
 		_dates = dates;
@@ -85,6 +85,7 @@ internal class RanScraperForIidaR : IScraper {
 						csvWriter.WriteHeader<Entry>();
 						await csvWriter.NextRecordAsync();
 						await csvWriter.WriteRecordsAsync(entries);
+						Urls.Add(path);
 					} else {
 						Console.WriteLine($"Date {date}: Error while getting data from AGROMET");
 					}

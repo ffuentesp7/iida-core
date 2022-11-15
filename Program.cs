@@ -144,9 +144,15 @@ using (var connection = factory.CreateConnection()) {
 			var usgsScraper = new UsgsScraper(userFolder, usgsParameters);
 			scraperContext.SetStrategy(usgsScraper);
 			await scraperContext.ExecuteStrategy(queueRequest!, latitude, longitude);
+			var usgScraperResults = scraperContext.CreateResults<Iida.Shared.Models.SatelliteImage>(order);
+			await context.SatelliteImages!.AddRangeAsync(usgScraperResults);
+			_ = await context.SaveChangesAsync();
 			var ranScraperForIidaR = new RanScraperForIidaR(userFolder, usgsScraper.Dates, usgsScraper.EntityIds, ranParameters);
 			scraperContext.SetStrategy(ranScraperForIidaR);
 			await scraperContext.ExecuteStrategy(queueRequest!, latitude, longitude);
+			var meteorologicalDatas = scraperContext.CreateResults<Iida.Shared.Models.MeteorologicalData>(order);
+			await context.MeteorologicalDatas!.AddRangeAsync(meteorologicalDatas);
+			_ = await context.SaveChangesAsync();
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 			order!.Status = "Completed";
 			_ = await context.SaveChangesAsync();

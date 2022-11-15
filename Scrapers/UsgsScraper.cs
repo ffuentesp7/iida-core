@@ -16,7 +16,7 @@ internal partial class UsgsScraper : IScraper {
 	private readonly string _userFolder;
 	private readonly Parameters _parameters;
 	public List<string> Dates { get; set; } = new List<string>();
-	public List<string> Paths { get; set; } = new List<string>();
+	public List<string> Urls { get; set; } = new List<string>();
 	public List<string> EntityIds { get; set; } = new List<string>();
 	public UsgsScraper(string userFolder, Parameters parameters) {
 		_userFolder = userFolder;
@@ -119,16 +119,16 @@ internal partial class UsgsScraper : IScraper {
 									Console.WriteLine($"Scene {result.entityId}: downloading scene from {downloadUrl}...");
 									using (var download = await downloadClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead)) {
 										using (var from = await download.Content.ReadAsStreamAsync()) {
-											using (var to = File.OpenWrite(Path.Combine(_userFolder, $"{result.entityId}.tar"))) {
+											using (var to = File.OpenWrite(Path.Combine(downloadPath, $"{result.entityId}.tar"))) {
 												await from.CopyToAsync(to);
 											}
 										}
 									}
 									Console.WriteLine($"Scene {result.entityId}: Download successful. Extracting TAR");
 									var tar = TarArchive.CreateInputTarArchive(File.OpenRead(Path.Combine(downloadPath, $"{result.entityId}.tar")), Encoding.UTF8);
-									tar.ExtractContents($"{Path.Combine(_userFolder, $"{result.entityId}")}");
+									tar.ExtractContents($"{Path.Combine(downloadPath, $"{result.entityId}")}");
 									tar.Close();
-									Paths.Add(downloadPath);
+									Urls.Add(downloadPath);
 									Console.WriteLine($"Scene {result.entityId}: complete");
 								} catch {
 									Console.WriteLine($"Scene {result.entityId}:Something happened while processing the scene/files");

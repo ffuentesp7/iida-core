@@ -3,6 +3,6 @@
 namespace Iida.Core.Scrapers;
 
 internal interface IScraper {
-	List<String> Paths { get; set; }
+	List<String> Urls { get; set; }
 	Task Execute(QueueRequest queueRequest, double latitude, double longitude);
 }
