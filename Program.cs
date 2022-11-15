@@ -128,29 +128,32 @@ using (var connection = factory.CreateConnection()) {
 			_ = Directory.CreateDirectory(userFolder);
 			var body = ea.Body.ToArray();
 			var message = Encoding.UTF8.GetString(body);
-			Console.WriteLine($"Order received");
-			var request = JsonConvert.DeserializeObject<Request>(message);
+			Console.WriteLine($"Order received. Processing now...");
+			var queueRequest = JsonConvert.DeserializeObject<QueueRequest>(message);
 			using var context = new AppDbContext(mySqlConnectionString!);
-			var order = context.Orders!.Where(o => o.Guid == request!.Guid).FirstOrDefault();
+			var order = context.Orders!.Where(o => o.Guid == queueRequest!.Guid).FirstOrDefault();
 			order!.Status = "Processing";
 			_ = await context.SaveChangesAsync();
 			Console.WriteLine("Calculating centroid of polygon...");
-			var polygon = (Polygon)request!.GeoJson!.Features[0].Geometry;
+			var polygon = (Polygon)queueRequest!.GeoJson!.Features[0].Geometry;
 			var lineString = polygon.Coordinates[0];
 			var vertexes = lineString.Coordinates;
 			var (latitude, longitude) = Centroid.Calculate(vertexes);
 			Console.WriteLine($"Centroid calculated: ({latitude}; {longitude})");
 			var usgsScraper = new UsgsScraper(userFolder, usgsParameters);
 			scraperContext.SetStrategy(usgsScraper);
-			await scraperContext.ExecuteStrategy(request!, latitude, longitude);
+			await scraperContext.ExecuteStrategy(queueRequest!, latitude, longitude);
 			var ranScraper = new RanScraperForIidaR(userFolder, usgsScraper.Dates, usgsScraper.EntityIds, ranParameters);
 			scraperContext.SetStrategy(ranScraper);
-			await scraperContext.ExecuteStrategy(request!, latitude, longitude);
+			await scraperContext.ExecuteStrategy(queueRequest!, latitude, longitude);
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 			order!.Status = "Completed";
 			_ = await context.SaveChangesAsync();
+			Console.WriteLine("Order completed");
 		} catch (JsonReaderException) {
 			Console.WriteLine("GeoJSON format error");
+		} catch (NullReferenceException) {
+			Console.WriteLine("Null reference detected");
 		} catch {
 			Console.WriteLine("Error");
 		}

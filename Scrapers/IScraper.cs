@@ -3,5 +3,5 @@
 namespace Iida.Core.Scrapers;
 
 internal interface IScraper {
-	Task Execute(Request request, double latitude, double longitude);
+	Task Execute(QueueRequest queueRequest, double latitude, double longitude);
 }

@@ -25,7 +25,7 @@ internal class RanScraperForIidaR : IScraper {
 		_parameters = parameters;
 		_entityIds = entityIds;
 	}
-	public async Task Execute(Request request, double latitude, double longitude) {
+	public async Task Execute(QueueRequest queueRequest, double latitude, double longitude) {
 		try {
 			var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture) {
 				HasHeaderRecord = true,
