@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 using ICSharpCode.SharpZipLib.Tar;
 
-using Iida.Shared.Models;
+using Iida.Shared.DataTransferObjects;
 using Iida.Shared.Usgs;
 
 using Newtonsoft.Json;
@@ -23,7 +23,7 @@ internal partial class UsgsScraper : IScraper {
 		_parameters = parameters;
 	}
 	[System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0063:Use simple 'using' statement", Justification = "Download breaks if using the simplified using statement")]
-	public async Task Execute(Order order, double latitude, double longitude) {
+	public async Task Execute(Request request, double latitude, double longitude) {
 		try {
 			Console.WriteLine("Getting HTTP clients ready...");
 			var apiClient = new HttpClient {
@@ -60,8 +60,8 @@ internal partial class UsgsScraper : IScraper {
 						datasetName = _parameters.Dataset,
 						sceneFilter = new {
 							acquisitionFilter = new {
-								start = order.Start,
-								end = order.End
+								start = request.Start,
+								end = request.End
 							},
 							spatialFilter = new {
 								filterType = "mbr",
@@ -97,8 +97,8 @@ internal partial class UsgsScraper : IScraper {
 						Console.WriteLine($"Found {searchSceneResponse!.data!.recordsReturned} scenes");
 						foreach (var result in searchSceneResponse.data.results!) {
 							Console.WriteLine($"Checking scene {result!.entityId}...");
-							if (double.Parse(result.cloudCover!) > double.Parse(order.CloudCover!)) {
-								Console.WriteLine($"Scene exceeds maximum cloud cover ({order.CloudCover}%)");
+							if (double.Parse(result.cloudCover!) > double.Parse(request.CloudCover!)) {
+								Console.WriteLine($"Scene exceeds maximum cloud cover ({request.CloudCover}%)");
 								continue;
 							}
 							EntityIds.Add(result.entityId!);

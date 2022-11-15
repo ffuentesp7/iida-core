@@ -118,7 +118,7 @@ using (var connection = factory.CreateConnection()) {
 	using var channel = connection.CreateModel();
 	_ = channel.QueueDeclare(queue: rabbitMqQueue, durable: true, exclusive: false, autoDelete: false, arguments: null);
 	channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
-	Console.WriteLine("Waiting for order requests...");
+	Console.WriteLine("Waiting for requests...");
 	var consumer = new EventingBasicConsumer(channel);
 	consumer.Received += async (sender, ea) => {
 		try {
@@ -135,19 +135,12 @@ using (var connection = factory.CreateConnection()) {
 			var vertexes = lineString.Coordinates;
 			var (latitude, longitude) = Centroid.Calculate(vertexes);
 			Console.WriteLine($"Centroid calculated: ({latitude}; {longitude})");
-			Console.WriteLine($"Creating order...");
-			var order = new Iida.Shared.Models.Order {
-				Guid = Guid.NewGuid(),
-				Timestamp = DateTime.UtcNow,
-				Start = request.Start,
-				End = request.End,
-			};
 			var usgsScraper = new UsgsScraper(userFolder, usgsParameters);
 			scraperContext.SetStrategy(usgsScraper);
-			await scraperContext.ExecuteStrategy(order!, latitude, longitude);
+			await scraperContext.ExecuteStrategy(request!, latitude, longitude);
 			var ranScraper = new RanScraperForIidaR(userFolder, usgsScraper.Dates, usgsScraper.EntityIds, ranParameters);
 			scraperContext.SetStrategy(ranScraper);
-			await scraperContext.ExecuteStrategy(order!, latitude, longitude);
+			await scraperContext.ExecuteStrategy(request!, latitude, longitude);
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
 		} catch (JsonReaderException) {
 			Console.WriteLine("GeoJSON format error");

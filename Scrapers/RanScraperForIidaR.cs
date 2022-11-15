@@ -6,7 +6,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using CsvHelper.Configuration.Attributes;
 
-using Iida.Shared.Models;
+using Iida.Shared.DataTransferObjects;
 using Iida.Shared.Ran;
 
 using Oware;
@@ -25,7 +25,7 @@ internal class RanScraperForIidaR : IScraper {
 		_parameters = parameters;
 		_entityIds = entityIds;
 	}
-	public async Task Execute(Order order, double latitude, double longitude) {
+	public async Task Execute(Request request, double latitude, double longitude) {
 		try {
 			var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture) {
 				HasHeaderRecord = true,
