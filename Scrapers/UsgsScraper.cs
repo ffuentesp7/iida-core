@@ -97,7 +97,7 @@ internal partial class UsgsScraper : IScraper {
 						Console.WriteLine($"Found {searchSceneResponse!.data!.recordsReturned} scenes");
 						foreach (var result in searchSceneResponse.data.results!) {
 							Console.WriteLine($"Checking scene {result!.entityId}...");
-							if (double.Parse(result.cloudCover!) > double.Parse(request.CloudCover!)) {
+							if (double.Parse(result.cloudCover!) > request.CloudCover!) {
 								Console.WriteLine($"Scene exceeds maximum cloud cover ({request.CloudCover}%)");
 								continue;
 							}

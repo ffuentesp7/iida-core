@@ -4,6 +4,7 @@ using System.Text;
 using GeoJSON.Net.Geometry;
 
 using Iida.Core;
+using Iida.Core.Contexts;
 using Iida.Core.Scrapers;
 using Iida.Shared.DataTransferObjects;
 
@@ -129,6 +130,10 @@ using (var connection = factory.CreateConnection()) {
 			var message = Encoding.UTF8.GetString(body);
 			Console.WriteLine($"Order received");
 			var request = JsonConvert.DeserializeObject<Request>(message);
+			using var context = new AppDbContext(mySqlConnectionString!);
+			var order = context.Orders!.Where(o => o.Guid == request!.Guid).FirstOrDefault();
+			order!.Status = "Processing";
+			_ = await context.SaveChangesAsync();
 			Console.WriteLine("Calculating centroid of polygon...");
 			var polygon = (Polygon)request!.GeoJson!.Features[0].Geometry;
 			var lineString = polygon.Coordinates[0];
@@ -142,6 +147,8 @@ using (var connection = factory.CreateConnection()) {
 			scraperContext.SetStrategy(ranScraper);
 			await scraperContext.ExecuteStrategy(request!, latitude, longitude);
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+			order!.Status = "Completed";
+			_ = await context.SaveChangesAsync();
 		} catch (JsonReaderException) {
 			Console.WriteLine("GeoJSON format error");
 		} catch {
