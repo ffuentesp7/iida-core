@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 
 using ICSharpCode.SharpZipLib.Tar;
 
-using Iida.Shared.DataTransferObjects;
+using Iida.Shared.Models;
 using Iida.Shared.Usgs;
 
 using Newtonsoft.Json;

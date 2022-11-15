@@ -122,7 +122,7 @@ using (var connection = factory.CreateConnection()) {
 	var consumer = new EventingBasicConsumer(channel);
 	consumer.Received += async (sender, ea) => {
 		try {
-			Console.WriteLine($"Creating temp folder...");
+			Console.WriteLine($"Creating folder...");
 			var userFolder = $"{Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "iida")}";
 			_ = Directory.CreateDirectory(userFolder);
 			var body = ea.Body.ToArray();
@@ -136,7 +136,12 @@ using (var connection = factory.CreateConnection()) {
 			var (latitude, longitude) = Centroid.Calculate(vertexes);
 			Console.WriteLine($"Centroid calculated: ({latitude}; {longitude})");
 			Console.WriteLine($"Creating order...");
-
+			var order = new Iida.Shared.Models.Order {
+				Guid = Guid.NewGuid(),
+				Timestamp = DateTime.UtcNow,
+				Start = request.Start,
+				End = request.End,
+			};
 			var usgsScraper = new UsgsScraper(userFolder, usgsParameters);
 			scraperContext.SetStrategy(usgsScraper);
 			await scraperContext.ExecuteStrategy(order!, latitude, longitude);
@@ -144,8 +149,6 @@ using (var connection = factory.CreateConnection()) {
 			scraperContext.SetStrategy(ranScraper);
 			await scraperContext.ExecuteStrategy(order!, latitude, longitude);
 			channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
-			Console.WriteLine("Deleting temp folder...");
-			Directory.Delete(userFolder, true);
 		} catch (JsonReaderException) {
 			Console.WriteLine("GeoJSON format error");
 		} catch {

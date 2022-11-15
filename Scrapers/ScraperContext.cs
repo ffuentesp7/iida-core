@@ -1,4 +1,4 @@
-﻿using Iida.Shared.DataTransferObjects;
+﻿using Iida.Shared.Models;
 
 namespace Iida.Core.Scrapers;
 

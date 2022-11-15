@@ -6,7 +6,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using CsvHelper.Configuration.Attributes;
 
-using Iida.Shared.DataTransferObjects;
+using Iida.Shared.Models;
 using Iida.Shared.Ran;
 
 using Oware;
