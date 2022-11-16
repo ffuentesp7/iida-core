@@ -41,6 +41,7 @@ string? usgsDownloadScene;
 string? usgsUsername;
 string? usgsPassword;
 string? usgsTimeout;
+string? metricREndpoint;
 if (Debugger.IsAttached) {
 	ranApi = configurationRoot.GetSection("RAN_API").Value;
 	ranHostname = configurationRoot.GetSection("RAN_HOSTNAME").Value;
@@ -62,6 +63,7 @@ if (Debugger.IsAttached) {
 	usgsUsername = configurationRoot.GetSection("USGS_USERNAME").Value;
 	usgsPassword = configurationRoot.GetSection("USGS_PASSWORD").Value;
 	usgsTimeout = configurationRoot.GetSection("USGS_TIMEOUT").Value;
+	metricREndpoint = configurationRoot.GetSection("METRIC_R_ENDPOINT").Value;
 } else {
 	ranApi = Environment.GetEnvironmentVariable("RAN_API");
 	ranHostname = Environment.GetEnvironmentVariable("RAN_HOSTNAME");
@@ -83,6 +85,7 @@ if (Debugger.IsAttached) {
 	usgsUsername = Environment.GetEnvironmentVariable("USGS_USERNAME");
 	usgsPassword = Environment.GetEnvironmentVariable("USGS_PASSWORD");
 	usgsTimeout = Environment.GetEnvironmentVariable("USGS_TIMEOUT");
+	metricREndpoint = Environment.GetEnvironmentVariable("METRIC_R_ENDPOINT");
 }
 var ranParameters = new Iida.Shared.RanForIidaR.Parameters {
 	Api = ranApi,
@@ -113,6 +116,9 @@ var usgsParameters = new Iida.Shared.Usgs.Parameters {
 	Username = usgsUsername,
 	Password = usgsPassword,
 	Timeout = usgsTimeout
+};
+var metricRParameters = new Iida.Shared.MetricR.Parameters {
+	Endpoint = metricREndpoint
 };
 var scraperContext = new ScraperContext();
 var factory = new ConnectionFactory() { HostName = rabbitMqHostname, UserName = rabbitMqUsername, Password = rabbitMqPassword };
